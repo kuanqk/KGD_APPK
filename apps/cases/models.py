@@ -18,6 +18,8 @@ class CaseStatus(models.TextChoices):
     DELIVERED = "delivered", "Вручено"
     RETURNED = "returned", "Возврат"
     MAIL_RETURNED = "mail_returned", "Возврат почтового отправления"
+    ACT_CREATED = "act_created", "Акт обследования оформлен"
+    DER_SENT = "der_sent", "Запрос в ДЭР направлен"
     HEARING_SCHEDULED = "hearing_scheduled", "Заслушивание назначено"
     HEARING_DONE = "hearing_done", "Заслушивание проведено"
     DECISION_PENDING = "decision_pending", "Ожидает решения"

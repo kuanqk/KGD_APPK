@@ -6,9 +6,10 @@ from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import DetailView, FormView
 
-from apps.cases.models import AdministrativeCase
+from apps.cases.models import AdministrativeCase, CaseStatus
+from apps.cases.services import after_return_actions
 from .forms import DocumentCreateForm
-from .models import CaseDocument, DocumentStatus
+from .models import CaseDocument, DocumentStatus, DocumentType
 from .services import create_new_version, generate_document
 
 logger = logging.getLogger(__name__)
@@ -79,6 +80,103 @@ class DocumentDetailView(LoginRequiredMixin, DetailView):
 
         messages.error(request, "Неизвестное действие.")
         return redirect("documents:detail", pk=doc.pk)
+
+
+class InspectionActCreateView(LoginRequiredMixin, FormView):
+    """Генерация Акта налогового обследования. Доступна при статусе MAIL_RETURNED."""
+
+    template_name = "documents/act_create.html"
+    form_class = DocumentCreateForm
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.role not in ("admin", "operator"):
+            messages.error(request, "У вас нет прав для создания документов.")
+            return redirect("cases:list")
+
+        self.case = get_object_or_404(
+            AdministrativeCase.objects.for_user(request.user),
+            pk=kwargs["case_pk"],
+        )
+
+        if self.case.status != CaseStatus.MAIL_RETURNED:
+            messages.error(
+                request,
+                "Акт обследования оформляется только после возврата почтового отправления."
+            )
+            return redirect("cases:detail", pk=self.case.pk)
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        # Фиксируем тип — пользователь не выбирает
+        form.fields["doc_type"].initial = DocumentType.INSPECTION_ACT
+        form.fields["doc_type"].choices = [(DocumentType.INSPECTION_ACT, "Акт налогового обследования")]
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["case"] = self.case
+        context["doc_type_display"] = "Акт налогового обследования"
+        return context
+
+    def form_valid(self, form):
+        try:
+            doc = generate_document(self.case, DocumentType.INSPECTION_ACT, self.request.user)
+            after_return_actions(self.case, DocumentType.INSPECTION_ACT, self.request.user)
+            messages.success(self.request, f"Акт {doc.doc_number} успешно оформлен.")
+            return redirect("cases:detail", pk=self.case.pk)
+        except ValueError as e:
+            messages.error(self.request, str(e))
+            return self.form_invalid(form)
+
+
+class DerRequestCreateView(LoginRequiredMixin, FormView):
+    """Генерация Запроса в ДЭР. Доступна при статусе ACT_CREATED."""
+
+    template_name = "documents/der_create.html"
+    form_class = DocumentCreateForm
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.role not in ("admin", "operator"):
+            messages.error(request, "У вас нет прав для создания документов.")
+            return redirect("cases:list")
+
+        self.case = get_object_or_404(
+            AdministrativeCase.objects.for_user(request.user),
+            pk=kwargs["case_pk"],
+        )
+
+        if self.case.status != CaseStatus.ACT_CREATED:
+            messages.error(
+                request,
+                "Запрос в ДЭР создаётся только после оформления акта обследования."
+            )
+            return redirect("cases:detail", pk=self.case.pk)
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields["doc_type"].initial = DocumentType.DER_REQUEST
+        form.fields["doc_type"].choices = [(DocumentType.DER_REQUEST, "Запрос в ДЭР об оказании содействия")]
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["case"] = self.case
+        context["doc_type_display"] = "Запрос в ДЭР об оказании содействия"
+        return context
+
+    def form_valid(self, form):
+        try:
+            doc = generate_document(self.case, DocumentType.DER_REQUEST, self.request.user)
+            after_return_actions(self.case, DocumentType.DER_REQUEST, self.request.user)
+            messages.success(self.request, f"Запрос в ДЭР {doc.doc_number} успешно создан.")
+            return redirect("cases:detail", pk=self.case.pk)
+        except ValueError as e:
+            messages.error(self.request, str(e))
+            return self.form_invalid(form)
 
 
 def document_download(request, pk):

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Запрос в ДЭР — {{ case.case_number }} — АППК{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'cases:detail' pk=case.pk %}" class="text-decoration-none text-muted small">
+        <i class="bi bi-arrow-left"></i> Дело {{ case.case_number }}
+    </a>
+    <h4 class="mb-0 mt-1"><i class="bi bi-envelope-paper"></i> Создать запрос в ДЭР об оказании содействия</h4>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i>
+            Акт налогового обследования оформлен. Следующий шаг —
+            направить запрос в ДЭР для установления местонахождения налогоплательщика.
+        </div>
+
+        <div class="card">
+            <div class="card-header fw-semibold">Подтверждение</div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-3">
+                    <tr>
+                        <td class="text-muted" style="width:40%">Дело</td>
+                        <td class="fw-semibold">{{ case.case_number }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Налогоплательщик</td>
+                        <td>{{ case.taxpayer.name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">ИИН/БИН</td>
+                        <td class="font-monospace">{{ case.taxpayer.iin_bin }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Документ</td>
+                        <td>{{ doc_type_display }}</td>
+                    </tr>
+                </table>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="doc_type" value="der_request">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-envelope-paper"></i> Создать запрос в ДЭР
+                        </button>
+                        <a href="{% url 'cases:detail' pk=case.pk %}" class="btn btn-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

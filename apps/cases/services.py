@@ -117,3 +117,37 @@ def change_case_status(case: AdministrativeCase, new_status: str, user, comment:
 
     logger.info("Case %s status: %s → %s by %s", case.case_number, old_status, new_status, user)
     return case
+
+
+def after_return_actions(case: AdministrativeCase, doc_type: str, user) -> AdministrativeCase:
+    """
+    Управляет прогрессией статусов после возврата почтового отправления.
+
+    MAIL_RETURNED → (акт) → ACT_CREATED → (ДЭР) → DER_SENT
+
+    Вызывается из views после успешной генерации документа.
+    Бизнес-правило: кнопка "Запрос в ДЭР" активна только при ACT_CREATED.
+    """
+    from apps.documents.models import DocumentType
+
+    if doc_type == DocumentType.INSPECTION_ACT:
+        if case.status == CaseStatus.MAIL_RETURNED:
+            change_case_status(
+                case, CaseStatus.ACT_CREATED, user,
+                comment="Акт налогового обследования оформлен",
+            )
+    elif doc_type == DocumentType.DER_REQUEST:
+        if case.status == CaseStatus.ACT_CREATED:
+            change_case_status(
+                case, CaseStatus.DER_SENT, user,
+                comment="Запрос в ДЭР об оказании содействия направлен",
+            )
+
+    audit_log(
+        user=user,
+        action="return_action_taken",
+        entity_type="case",
+        entity_id=case.id,
+        details={"doc_type": doc_type, "new_status": case.status},
+    )
+    return case
