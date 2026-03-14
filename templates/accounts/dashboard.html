@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Главная — АППК{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <h3>Добро пожаловать, {{ user.get_full_name|default:user.username }}!</h3>
+        <p class="text-muted">Роль: <strong>{{ user.get_role_display }}</strong>
+        {% if user.region %} · Регион: <strong>{{ user.region }}</strong>{% endif %}
+        </p>
+    </div>
+
+    {% if user.role == 'admin' or user.role == 'operator' or user.role == 'executor' %}
+    <div class="col-md-3 mb-3">
+        <div class="card border-primary">
+            <div class="card-body text-center">
+                <i class="bi bi-folder2-open text-primary" style="font-size:2rem;"></i>
+                <h6 class="mt-2">Реестр дел</h6>
+                <a href="#" class="btn btn-sm btn-outline-primary mt-1">Открыть</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if user.role == 'admin' or user.role == 'reviewer' %}
+    <div class="col-md-3 mb-3">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <i class="bi bi-check2-circle text-warning" style="font-size:2rem;"></i>
+                <h6 class="mt-2">Согласование</h6>
+                <a href="#" class="btn btn-sm btn-outline-warning mt-1">Открыть</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if user.role == 'admin' %}
+    <div class="col-md-3 mb-3">
+        <div class="card border-danger">
+            <div class="card-body text-center">
+                <i class="bi bi-journal-text text-danger" style="font-size:2rem;"></i>
+                <h6 class="mt-2">Журнал аудита</h6>
+                <a href="{% url 'admin:audit_auditlog_changelist' %}" class="btn btn-sm btn-outline-danger mt-1">Открыть</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="col-md-3 mb-3">
+        <div class="card border-secondary">
+            <div class="card-body text-center">
+                <i class="bi bi-bar-chart text-secondary" style="font-size:2rem;"></i>
+                <h6 class="mt-2">Отчёты</h6>
+                <a href="#" class="btn btn-sm btn-outline-secondary mt-1">Открыть</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
