@@ -77,8 +77,27 @@ services:
     depends_on:
       - web
 
+  backup:
+    image: postgres:15-alpine
+    volumes:
+      - ./docker/backup/backup.sh:/backup.sh:ro
+      - backup_data:/backups
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: db
+    entrypoint: >
+      sh -c "chmod +x /backup.sh &&
+             echo '0 2 * * * /backup.sh >> /var/log/backup.log 2>&1' | crontab - &&
+             crond -f -l 2"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
   static_volume:
   media_volume:
+  backup_data:

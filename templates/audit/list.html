@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Лог системы — АППК{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-journal-text"></i> Лог системы</h4>
+    <a href="{% url 'audit:export' %}?{{ request.GET.urlencode }}"
+       class="btn btn-sm btn-outline-success">
+        <i class="bi bi-file-earmark-excel"></i> Экспорт XLSX
+    </a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header fw-semibold"><i class="bi bi-funnel"></i> Фильтры</div>
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small mb-1">{{ filter_form.user_search.label }}</label>
+                {{ filter_form.user_search }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">{{ filter_form.action.label }}</label>
+                {{ filter_form.action }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">{{ filter_form.entity_type.label }}</label>
+                {{ filter_form.entity_type }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">{{ filter_form.date_from.label }}</label>
+                {{ filter_form.date_from }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">{{ filter_form.date_to.label }}</label>
+                {{ filter_form.date_to }}
+            </div>
+            <div class="col-md-auto">
+                <button type="submit" class="btn btn-sm btn-primary">
+                    <i class="bi bi-search"></i> Найти
+                </button>
+                <a href="{% url 'audit:list' %}" class="btn btn-sm btn-outline-secondary ms-1">Сбросить</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0 font-monospace" style="font-size:.82rem">
+            <thead class="table-dark">
+                <tr>
+                    <th>Дата и время</th>
+                    <th>Пользователь</th>
+                    <th>Действие</th>
+                    <th>Объект</th>
+                    <th>ID</th>
+                    <th>IP</th>
+                    <th>Детали</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td class="text-muted text-nowrap">{{ log.created_at|date:"d.m.Y H:i:s" }}</td>
+                    <td>{{ log.user.username|default:"—" }}</td>
+                    <td>
+                        <span class="badge
+                            {% if 'created' in log.action %}bg-success
+                            {% elif 'deleted' in log.action or 'rejected' in log.action %}bg-danger
+                            {% elif 'approved' in log.action %}bg-primary
+                            {% elif 'exported' in log.action %}bg-info
+                            {% else %}bg-secondary{% endif %}">
+                            {{ log.action }}
+                        </span>
+                    </td>
+                    <td class="text-muted">{{ log.entity_type }}</td>
+                    <td class="text-muted">{{ log.entity_id|default:"—" }}</td>
+                    <td class="text-muted small">{{ log.ip_address|default:"—" }}</td>
+                    <td class="small text-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                        title="{{ log.details }}">
+                        {{ log.details|truncatechars:60 }}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="text-muted p-3">Записей не найдено.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if is_paginated %}
+        <div class="p-3 border-top d-flex justify-content-between align-items-center">
+            <span class="text-muted small">Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}">‹</a>
+                    </li>
+                    {% endif %}
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}">›</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

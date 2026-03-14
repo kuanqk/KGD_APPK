@@ -8,3 +8,4 @@ django-extensions==3.2.3
 Pillow==10.2.0
 python-dotenv==1.0.1
 weasyprint==62.3
+django-ratelimit==4.1.0

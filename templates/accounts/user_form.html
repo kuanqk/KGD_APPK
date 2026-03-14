@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}{{ action }} — АППК{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'accounts:user_list' %}" class="text-decoration-none text-muted small">
+        <i class="bi bi-arrow-left"></i> Пользователи
+    </a>
+    <h4 class="mb-0 mt-1"><i class="bi bi-person-gear"></i> {{ action }}</h4>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Имя пользователя *</label>
+                            {{ form.username }}
+                            {% if form.username.errors %}<div class="text-danger small">{{ form.username.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Роль *</label>
+                            {{ form.role }}
+                            {% if form.role.errors %}<div class="text-danger small">{{ form.role.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Фамилия</label>
+                            {{ form.last_name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Имя</label>
+                            {{ form.first_name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Email</label>
+                            {{ form.email }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Регион</label>
+                            {{ form.region }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Телефон</label>
+                            {{ form.phone }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Должность</label>
+                            {{ form.position }}
+                        </div>
+
+                        {% if form.password1 %}
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Пароль *</label>
+                            {{ form.password1 }}
+                            {% if form.password1.errors %}<div class="text-danger small">{{ form.password1.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Подтверждение *</label>
+                            {{ form.password2 }}
+                            {% if form.password2.errors %}<div class="text-danger small">{{ form.password2.errors }}</div>{% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if form.is_active %}
+                        <div class="col-12">
+                            <div class="form-check">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    Активная учётная запись
+                                </label>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Сохранить
+                        </button>
+                        <a href="{% url 'accounts:user_list' %}" class="btn btn-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
