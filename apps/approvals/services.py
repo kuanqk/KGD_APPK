@@ -40,6 +40,24 @@ def get_history(entity) -> "QuerySet[ApprovalFlow]":
     return ApprovalFlow.objects.for_entity(entity_type, entity.id)
 
 
+def _notify_reviewers(message: str, case=None, url: str = "") -> None:
+    """Уведомляет всех активных reviewer/admin о новом согласовании."""
+    from apps.accounts.models import User
+    from apps.notifications.models import NotificationType
+    from apps.notifications.services import notify_many
+
+    reviewers = list(
+        User.objects.filter(role__in=("admin", "reviewer"), is_active=True)
+    )
+    notify_many(
+        users=reviewers,
+        notification_type=NotificationType.APPROVAL_NEEDED,
+        message=message,
+        case=case,
+        url=url,
+    )
+
+
 @transaction.atomic
 def send_to_approval(entity, user) -> ApprovalFlow:
     """
@@ -64,6 +82,26 @@ def send_to_approval(entity, user) -> ApprovalFlow:
         entity_id=entity.id,
         details={"version": version},
     )
+
+    # Уведомляем reviewer/admin
+    try:
+        from django.urls import reverse
+        case = getattr(entity, "case", None)
+        case_num = case.case_number if case else str(entity.id)
+        url = ""
+        if case:
+            url = reverse("approvals:queue")
+        repeat = f" (повтор v{version})" if version > 1 else ""
+        _notify_reviewers(
+            message=(
+                f"Требует согласования: {flow.get_entity_type_display()} "
+                f"по делу {case_num}{repeat}."
+            ),
+            case=case,
+            url=url,
+        )
+    except Exception:
+        logger.exception("send_to_approval: failed to notify reviewers")
 
     logger.info(
         "ApprovalFlow created: entity_type=%s entity_id=%s version=%s by %s",
@@ -94,6 +132,27 @@ def approve(flow: ApprovalFlow, reviewer, comment: str = "") -> ApprovalFlow:
         details={"version": flow.version, "comment": comment},
     )
 
+    # Уведомляем отправителя об утверждении
+    try:
+        from apps.notifications.models import NotificationType
+        from apps.notifications.services import notify
+        from django.urls import reverse
+
+        sender = flow.sent_by
+        if sender:
+            case = _get_entity_case(flow)
+            case_num = case.case_number if case else str(flow.entity_id)
+            url = reverse("decisions:detail", kwargs={"pk": flow.entity_id}) if flow.entity_type == EntityType.DECISION else ""
+            notify(
+                user=sender,
+                notification_type=NotificationType.STAGE_COMPLETED,
+                message=f"Решение по делу {case_num} утверждено руководителем.",
+                case=case,
+                url=url,
+            )
+    except Exception:
+        logger.exception("approve: failed to notify sender")
+
     logger.info(
         "ApprovalFlow approved: entity_type=%s entity_id=%s v%s by %s",
         flow.entity_type, flow.entity_id, flow.version, reviewer,
@@ -103,7 +162,7 @@ def approve(flow: ApprovalFlow, reviewer, comment: str = "") -> ApprovalFlow:
 
 @transaction.atomic
 def reject(flow: ApprovalFlow, reviewer, comment: str) -> ApprovalFlow:
-    """Отклоняет решение без возврата на доработку."""
+    """Отклоняет решение."""
     if not flow.is_pending:
         raise ValueError("Согласование уже завершено.")
     if not comment.strip():
@@ -124,6 +183,27 @@ def reject(flow: ApprovalFlow, reviewer, comment: str) -> ApprovalFlow:
         entity_id=flow.entity_id,
         details={"version": flow.version, "comment": comment},
     )
+
+    # Уведомляем отправителя об отклонении
+    try:
+        from apps.notifications.models import NotificationType
+        from apps.notifications.services import notify
+        from django.urls import reverse
+
+        sender = flow.sent_by
+        if sender:
+            case = _get_entity_case(flow)
+            case_num = case.case_number if case else str(flow.entity_id)
+            url = reverse("decisions:detail", kwargs={"pk": flow.entity_id}) if flow.entity_type == EntityType.DECISION else ""
+            notify(
+                user=sender,
+                notification_type=NotificationType.RETURNED,
+                message=f"Решение по делу {case_num} отклонено. Комментарий: {comment}",
+                case=case,
+                url=url,
+            )
+    except Exception:
+        logger.exception("reject: failed to notify sender")
 
     logger.info(
         "ApprovalFlow rejected: entity_type=%s entity_id=%s v%s by %s",
@@ -159,11 +239,48 @@ def return_for_revision(flow: ApprovalFlow, reviewer, comment: str) -> ApprovalF
         details={"version": flow.version, "comment": comment},
     )
 
+    # Уведомляем отправителя о возврате
+    try:
+        from apps.notifications.models import NotificationType
+        from apps.notifications.services import notify
+        from django.urls import reverse
+
+        sender = flow.sent_by
+        if sender:
+            case = _get_entity_case(flow)
+            case_num = case.case_number if case else str(flow.entity_id)
+            url = reverse("decisions:detail", kwargs={"pk": flow.entity_id}) if flow.entity_type == EntityType.DECISION else ""
+            notify(
+                user=sender,
+                notification_type=NotificationType.RETURNED,
+                message=(
+                    f"Решение по делу {case_num} возвращено на доработку. "
+                    f"Комментарий: {comment}"
+                ),
+                case=case,
+                url=url,
+            )
+    except Exception:
+        logger.exception("return_for_revision: failed to notify sender")
+
     logger.info(
         "ApprovalFlow returned: entity_type=%s entity_id=%s v%s by %s",
         flow.entity_type, flow.entity_id, flow.version, reviewer,
     )
     return flow
+
+
+# ─── Вспомогательные функции ──────────────────────────────────────────────────
+
+def _get_entity_case(flow: ApprovalFlow):
+    """Возвращает AdministrativeCase, связанный с сущностью flow."""
+    try:
+        if flow.entity_type == EntityType.DECISION:
+            from apps.decisions.models import FinalDecision
+            return FinalDecision.objects.select_related("case").get(pk=flow.entity_id).case
+    except Exception:
+        pass
+    return None
 
 
 # ─── Обработчики по типу сущности ─────────────────────────────────────────────
@@ -190,9 +307,8 @@ def _on_rejected(flow: ApprovalFlow, reviewer, comment: str):
 
 def _on_returned(flow: ApprovalFlow, reviewer, comment: str):
     """
-    RETURNED: откатывает FinalDecision → PENDING_APPROVAL остаётся,
-    но статус дела возвращается к PROTOCOL_CREATED чтобы оператор
-    мог отредактировать и переотправить на согласование.
+    RETURNED: откатывает статус дела к PROTOCOL_CREATED чтобы оператор
+    мог создать новое решение и переотправить на согласование.
     """
     from apps.decisions.models import FinalDecision, DecisionStatus
     from apps.cases.models import CaseStatus, CaseEvent, CaseEventType
@@ -201,8 +317,6 @@ def _on_returned(flow: ApprovalFlow, reviewer, comment: str):
     if flow.entity_type == EntityType.DECISION:
         decision = FinalDecision.objects.select_related("case").get(pk=flow.entity_id)
 
-        # Помечаем само решение как возвращённое (используем REJECTED в модели —
-        # визуально отличаем через ApprovalFlow.result=RETURNED)
         decision.status = DecisionStatus.REJECTED
         decision.rejection_comment = comment
         decision.approver = reviewer

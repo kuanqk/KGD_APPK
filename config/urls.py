@@ -12,6 +12,7 @@ urlpatterns = [
     path("hearings/", include("apps.hearings.urls", namespace="hearings")),
     path("decisions/", include("apps.decisions.urls", namespace="decisions")),
     path("approvals/", include("apps.approvals.urls", namespace="approvals")),
+    path("notifications/", include("apps.notifications.urls", namespace="notifications")),
 ]
 
 if settings.DEBUG:

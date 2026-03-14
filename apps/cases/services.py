@@ -80,6 +80,22 @@ def create_case(
         details={"case_number": case.case_number, "taxpayer_iin": taxpayer.iin_bin},
     )
 
+    # Уведомляем ответственного о назначении
+    if responsible_user and responsible_user != operator:
+        try:
+            from django.urls import reverse
+            from apps.notifications.models import NotificationType
+            from apps.notifications.services import notify
+            notify(
+                user=responsible_user,
+                notification_type=NotificationType.ASSIGNED,
+                message=f"Вам назначено дело {case.case_number} ({case.taxpayer.name}).",
+                case=case,
+                url=reverse("cases:detail", kwargs={"pk": case.pk}),
+            )
+        except Exception:
+            logger.exception("create_case: failed to notify responsible_user")
+
     logger.info("Case created: %s by %s", case.case_number, operator)
     return case
 

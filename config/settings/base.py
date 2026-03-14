@@ -31,6 +31,7 @@ LOCAL_APPS = [
     "apps.hearings",
     "apps.decisions",
     "apps.approvals",
+    "apps.notifications",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -59,6 +60,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "apps.notifications.context_processors.notifications",
             ],
         },
     },
@@ -115,11 +117,23 @@ CELERY_TIMEZONE = TIME_ZONE
 
 from celery.schedules import crontab
 CELERY_BEAT_SCHEDULE = {
-    "check-protocol-deadline-hourly": {
-        "task": "apps.hearings.tasks.check_protocol_deadline",
-        "schedule": crontab(minute=0),  # каждый час в 00 минут
+    "check-deadlines-hourly": {
+        "task": "apps.notifications.tasks.check_deadlines",
+        "schedule": crontab(minute=0),
+    },
+    "send-pending-emails-30min": {
+        "task": "apps.notifications.tasks.send_pending_emails",
+        "schedule": crontab(minute="*/30"),
     },
 }
+
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@appk.kz")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "25"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "False") == "True"
+SITE_URL = os.environ.get("SITE_URL", "http://localhost:8000")
 
 CACHES = {
     "default": {

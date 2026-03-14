@@ -100,6 +100,41 @@ def schedule_hearing(
         },
     )
 
+    # Уведомляем ответственного и участников о назначении заслушивания
+    try:
+        from django.urls import reverse
+        from apps.notifications.models import NotificationType
+        from apps.notifications.services import notify, notify_many
+        from apps.accounts.models import User
+
+        url = reverse("cases:detail", kwargs={"pk": case.pk})
+        msg = (
+            f"Заслушивание по делу {case.case_number} назначено "
+            f"на {hearing_date:%d.%m.%Y}"
+            + (f" {hearing_time:%H:%M}" if hearing_time else "")
+            + f", место: {location}."
+        )
+
+        to_notify = set()
+        if case.responsible_user and case.responsible_user != user:
+            to_notify.add(case.responsible_user)
+
+        # Участники — список user_id, если переданы
+        if participants:
+            part_users = list(User.objects.filter(pk__in=participants))
+            to_notify.update(u for u in part_users if u != user)
+
+        if to_notify:
+            notify_many(
+                users=list(to_notify),
+                notification_type=NotificationType.ASSIGNED,
+                message=msg,
+                case=case,
+                url=url,
+            )
+    except Exception:
+        logger.exception("schedule_hearing: failed to notify participants")
+
     logger.info("Hearing scheduled: case=%s date=%s by=%s", case.case_number, hearing_date, user)
     return hearing
 
