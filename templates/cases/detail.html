@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}{{ case.case_number }} — АППК{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <a href="{% url 'cases:list' %}" class="text-decoration-none text-muted small">
+            <i class="bi bi-arrow-left"></i> Реестр дел
+        </a>
+        <h4 class="mb-0 mt-1">
+            <i class="bi bi-folder2-open"></i> {{ case.case_number }}
+            <span class="badge ms-2
+                {% if case.status == 'draft' %}bg-secondary
+                {% elif case.status == 'terminated' or case.status == 'completed' %}bg-success
+                {% elif case.status == 'returned' %}bg-warning text-dark
+                {% elif case.status == 'archived' %}bg-dark
+                {% else %}bg-primary{% endif %}">
+                {{ case.get_status_display }}
+            </span>
+        </h4>
+    </div>
+</div>
+
+<div class="row">
+    {# Блок: Общая информация #}
+    <div class="col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header fw-semibold"><i class="bi bi-info-circle"></i> Общая информация</div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted" style="width:45%">Номер дела</td>
+                        <td class="fw-semibold">{{ case.case_number }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Статус</td>
+                        <td>{{ case.get_status_display }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Основание</td>
+                        <td>{{ case.get_basis_display }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Регион</td>
+                        <td>{{ case.region }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Подразделение</td>
+                        <td>{{ case.department|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Ответственный</td>
+                        <td>{{ case.responsible_user.get_full_name|default:case.responsible_user.username|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Категория</td>
+                        <td>{{ case.category|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Создал</td>
+                        <td>{{ case.created_by.get_full_name|default:case.created_by.username|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Дата создания</td>
+                        <td>{{ case.created_at|date:"d.m.Y H:i" }}</td>
+                    </tr>
+                    {% if case.closed_at %}
+                    <tr>
+                        <td class="text-muted">Дата закрытия</td>
+                        <td>{{ case.closed_at|date:"d.m.Y H:i" }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if case.description %}
+                    <tr>
+                        <td class="text-muted">Описание</td>
+                        <td>{{ case.description }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {# Блок: Данные налогоплательщика #}
+    <div class="col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header fw-semibold"><i class="bi bi-person"></i> Налогоплательщик</div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted" style="width:45%">ИИН/БИН</td>
+                        <td class="fw-semibold font-monospace">{{ case.taxpayer.iin_bin }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Наименование / ФИО</td>
+                        <td class="fw-semibold">{{ case.taxpayer.name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Тип</td>
+                        <td>{{ case.taxpayer.get_taxpayer_type_display }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Адрес</td>
+                        <td>{{ case.taxpayer.address|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Телефон</td>
+                        <td>{{ case.taxpayer.phone|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Email</td>
+                        <td>{{ case.taxpayer.email|default:"—" }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Блок: Лента событий #}
+<div class="card">
+    <div class="card-header fw-semibold"><i class="bi bi-clock-history"></i> Лента событий</div>
+    <div class="card-body p-0">
+        {% if events %}
+        <ul class="list-group list-group-flush">
+            {% for event in events %}
+            <li class="list-group-item py-2">
+                <div class="d-flex justify-content-between">
+                    <span>
+                        <span class="badge bg-light text-dark border me-2">{{ event.get_event_type_display }}</span>
+                        {{ event.description }}
+                    </span>
+                    <span class="text-muted small ms-3 text-nowrap">
+                        {{ event.created_by.get_full_name|default:event.created_by.username|default:"—" }}
+                        · {{ event.created_at|date:"d.m.Y H:i" }}
+                    </span>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted p-3 mb-0">Событий нет.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

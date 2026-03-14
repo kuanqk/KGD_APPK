@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Создать дело — АППК{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'cases:list' %}" class="text-decoration-none text-muted small">
+        <i class="bi bi-arrow-left"></i> Реестр дел
+    </a>
+    <h4 class="mb-0 mt-1"><i class="bi bi-folder-plus"></i> Новое административное дело</h4>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="row">
+
+        {# Данные налогоплательщика #}
+        <div class="col-md-6 mb-3">
+            <div class="card">
+                <div class="card-header fw-semibold"><i class="bi bi-person"></i> Данные налогоплательщика</div>
+                <div class="card-body">
+                    {% for field_name in "iin_bin taxpayer_name taxpayer_type taxpayer_address taxpayer_phone taxpayer_email"|split:" " %}
+                    {% with field=form|getitem:field_name %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">{{ field.label }}
+                            {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                        </label>
+                        {% if field.field.widget.input_type == 'select' %}
+                        <select name="{{ field.html_name }}" class="form-select form-select-sm{% if field.errors %} is-invalid{% endif %}">
+                            {% for val, lbl in field.field.choices %}
+                            <option value="{{ val }}" {% if field.value == val %}selected{% endif %}>{{ lbl }}</option>
+                            {% endfor %}
+                        </select>
+                        {% elif field.field.widget.attrs.rows %}
+                        <textarea name="{{ field.html_name }}" rows="{{ field.field.widget.attrs.rows }}"
+                                  class="form-control form-control-sm{% if field.errors %} is-invalid{% endif %}">{{ field.value|default:'' }}</textarea>
+                        {% else %}
+                        <input type="{{ field.field.widget.input_type|default:'text' }}"
+                               name="{{ field.html_name }}"
+                               value="{{ field.value|default:'' }}"
+                               class="form-control form-control-sm{% if field.errors %} is-invalid{% endif %}"
+                               {% if field.field.widget.attrs.placeholder %}placeholder="{{ field.field.widget.attrs.placeholder }}"{% endif %}>
+                        {% endif %}
+                        {% for error in field.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endwith %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {# Данные дела #}
+        <div class="col-md-6 mb-3">
+            <div class="card">
+                <div class="card-header fw-semibold"><i class="bi bi-folder2"></i> Данные дела</div>
+                <div class="card-body">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Регион <span class="text-danger">*</span></label>
+                        <input type="text" name="region" value="{{ form.region.value|default:'' }}"
+                               class="form-control form-control-sm{% if form.region.errors %} is-invalid{% endif %}">
+                        {% for error in form.region.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Подразделение</label>
+                        <input type="text" name="department" value="{{ form.department.value|default:'' }}"
+                               class="form-control form-control-sm">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Основание <span class="text-danger">*</span></label>
+                        <select name="basis" class="form-select form-select-sm{% if form.basis.errors %} is-invalid{% endif %}">
+                            {% for val, lbl in form.fields.basis.choices %}
+                            <option value="{{ val }}" {% if form.basis.value == val %}selected{% endif %}>{{ lbl }}</option>
+                            {% endfor %}
+                        </select>
+                        {% for error in form.basis.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Категория</label>
+                        <input type="text" name="category" value="{{ form.category.value|default:'' }}"
+                               class="form-control form-control-sm">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Ответственный</label>
+                        <select name="responsible_user" class="form-select form-select-sm">
+                            <option value="">— не назначен —</option>
+                            {% for user in form.fields.responsible_user.queryset %}
+                            <option value="{{ user.pk }}" {% if form.responsible_user.value == user.pk|stringformat:'s' %}selected{% endif %}>
+                                {{ user.get_full_name|default:user.username }} ({{ user.get_role_display }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Описание</label>
+                        <textarea name="description" rows="3" class="form-control form-control-sm">{{ form.description.value|default:'' }}</textarea>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> Создать дело
+        </button>
+        <a href="{% url 'cases:list' %}" class="btn btn-secondary">Отмена</a>
+    </div>
+</form>
+{% endblock %}

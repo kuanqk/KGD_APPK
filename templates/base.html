@@ -23,7 +23,7 @@
             <ul class="navbar-nav me-auto">
                 {% if user.role != 'observer' %}
                 <li class="nav-item">
-                    <a class="nav-link" href="#"><i class="bi bi-folder2"></i> Дела</a>
+                    <a class="nav-link" href="{% url 'cases:list' %}"><i class="bi bi-folder2"></i> Дела</a>
                 </li>
                 {% endif %}
                 {% if user.role == 'admin' or user.role == 'reviewer' %}
