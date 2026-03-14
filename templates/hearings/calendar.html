@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Заслушивания — АППК{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-calendar3"></i> Заслушивания</h4>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header fw-semibold text-primary">
+                <i class="bi bi-calendar-event"></i> Предстоящие ({{ upcoming|length }})
+            </div>
+            <div class="card-body p-0">
+                {% if upcoming %}
+                <ul class="list-group list-group-flush">
+                    {% for h in upcoming %}
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="fw-semibold">
+                                    {{ h.hearing_date|date:"d.m.Y" }}
+                                    {% if h.hearing_time %}<span class="text-muted">{{ h.hearing_time|time:"H:i" }}</span>{% endif %}
+                                </div>
+                                <div>
+                                    <a href="{% url 'cases:detail' pk=h.case.pk %}" class="text-decoration-none">
+                                        {{ h.case.case_number }}
+                                    </a>
+                                    — {{ h.case.taxpayer.name }}
+                                </div>
+                                <div class="text-muted small">
+                                    <i class="bi bi-geo-alt"></i> {{ h.location }}
+                                    · {{ h.get_format_display }}
+                                </div>
+                            </div>
+                            <a href="{% url 'hearings:detail' pk=h.pk %}" class="btn btn-sm btn-outline-primary">
+                                Открыть
+                            </a>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted p-3 mb-0">Нет предстоящих заслушиваний.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header fw-semibold text-muted">
+                <i class="bi bi-clock-history"></i> Прошедшие ({{ past|length }})
+            </div>
+            <div class="card-body p-0">
+                {% if past %}
+                <ul class="list-group list-group-flush">
+                    {% for h in past %}
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="fw-semibold">
+                                    {{ h.hearing_date|date:"d.m.Y" }}
+                                    <span class="badge ms-1
+                                        {% if h.status == 'completed' %}bg-success
+                                        {% elif h.status == 'cancelled' %}bg-danger
+                                        {% else %}bg-secondary{% endif %}">
+                                        {{ h.get_status_display }}
+                                    </span>
+                                    {% if h.has_protocol %}
+                                    <span class="badge bg-info ms-1">Протокол</span>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <a href="{% url 'cases:detail' pk=h.case.pk %}" class="text-decoration-none">
+                                        {{ h.case.case_number }}
+                                    </a>
+                                    — {{ h.case.taxpayer.name }}
+                                </div>
+                            </div>
+                            <a href="{% url 'hearings:detail' pk=h.pk %}" class="btn btn-sm btn-outline-secondary">
+                                Открыть
+                            </a>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted p-3 mb-0">Нет прошедших заслушиваний.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

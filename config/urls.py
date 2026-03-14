@@ -9,6 +9,7 @@ urlpatterns = [
     path("cases/", include("apps.cases.urls", namespace="cases")),
     path("documents/", include("apps.documents.urls", namespace="documents")),
     path("delivery/", include("apps.delivery.urls", namespace="delivery")),
+    path("hearings/", include("apps.hearings.urls", namespace="hearings")),
 ]
 
 if settings.DEBUG:

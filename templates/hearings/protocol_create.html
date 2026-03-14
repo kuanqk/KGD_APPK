@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Оформить протокол — АППК{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'hearings:detail' pk=hearing.pk %}" class="text-decoration-none text-muted small">
+        <i class="bi bi-arrow-left"></i> Заслушивание
+    </a>
+    <h4 class="mb-0 mt-1"><i class="bi bi-file-earmark-ruled"></i> Оформить протокол заслушивания</h4>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="alert alert-warning small">
+            <i class="bi bi-exclamation-triangle"></i>
+            После оформления протокола начнётся отсчёт <strong>2 рабочих дней</strong>
+            для вынесения итогового решения.
+        </div>
+
+        <div class="card">
+            <div class="card-header fw-semibold">Протокол заслушивания</div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-3">
+                    <tr><td class="text-muted" style="width:35%">Дело</td>
+                        <td><a href="{% url 'cases:detail' pk=hearing.case.pk %}">{{ hearing.case.case_number }}</a></td></tr>
+                    <tr><td class="text-muted">НП</td><td>{{ hearing.case.taxpayer.name }}</td></tr>
+                    <tr><td class="text-muted">Дата заслушивания</td><td>{{ hearing.hearing_date|date:"d.m.Y" }}</td></tr>
+                    <tr><td class="text-muted">Место</td><td>{{ hearing.location }}</td></tr>
+                    {% if hearing.participants %}
+                    <tr><td class="text-muted">Участники</td>
+                        <td>{% for p in hearing.participants %}{{ p }}{% if not forloop.last %}, {% endif %}{% endfor %}</td></tr>
+                    {% endif %}
+                </table>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">
+                            Краткое содержание / итог <span class="text-danger">*</span>
+                        </label>
+                        <textarea name="result_summary" rows="6"
+                                  class="form-control{% if form.result_summary.errors %} is-invalid{% endif %}"
+                                  placeholder="Опишите ход заседания и принятые решения...">{{ form.result_summary.value|default:'' }}</textarea>
+                        {% for e in form.result_summary.errors %}
+                        <div class="invalid-feedback">{{ e }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-file-earmark-check"></i> Оформить протокол
+                        </button>
+                        <a href="{% url 'hearings:detail' pk=hearing.pk %}" class="btn btn-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

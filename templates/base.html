@@ -31,6 +31,9 @@
                     <a class="nav-link" href="{% url 'delivery:list' %}"><i class="bi bi-send"></i> Вручение</a>
                 </li>
                 {% endif %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'hearings:calendar' %}"><i class="bi bi-calendar3"></i> Заслушивания</a>
+                </li>
                 {% if user.role == 'admin' or user.role == 'reviewer' %}
                 <li class="nav-item">
                     <a class="nav-link" href="#"><i class="bi bi-check2-square"></i> Согласование</a>

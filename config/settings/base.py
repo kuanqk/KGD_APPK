@@ -28,6 +28,7 @@ LOCAL_APPS = [
     "apps.audit",
     "apps.documents",
     "apps.delivery",
+    "apps.hearings",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -109,6 +110,14 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
+
+from celery.schedules import crontab
+CELERY_BEAT_SCHEDULE = {
+    "check-protocol-deadline-hourly": {
+        "task": "apps.hearings.tasks.check_protocol_deadline",
+        "schedule": crontab(minute=0),  # каждый час в 00 минут
+    },
+}
 
 CACHES = {
     "default": {

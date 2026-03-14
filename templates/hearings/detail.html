@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Заслушивание — {{ hearing.case.case_number }} — АППК{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'cases:detail' pk=hearing.case.pk %}" class="text-decoration-none text-muted small">
+        <i class="bi bi-arrow-left"></i> Дело {{ hearing.case.case_number }}
+    </a>
+    <h4 class="mb-0 mt-1">
+        <i class="bi bi-calendar-event"></i>
+        Заслушивание от {{ hearing.hearing_date|date:"d.m.Y" }}
+        <span class="badge ms-2
+            {% if hearing.status == 'completed' %}bg-success
+            {% elif hearing.status == 'cancelled' %}bg-danger
+            {% elif hearing.status == 'in_progress' %}bg-warning text-dark
+            {% else %}bg-primary{% endif %}">
+            {{ hearing.get_status_display }}
+        </span>
+    </h4>
+</div>
+
+<div class="row">
+    <div class="col-md-5 mb-3">
+        <div class="card h-100">
+            <div class="card-header fw-semibold"><i class="bi bi-info-circle"></i> Сведения</div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr><td class="text-muted" style="width:40%">Дело</td>
+                        <td><a href="{% url 'cases:detail' pk=hearing.case.pk %}">{{ hearing.case.case_number }}</a></td></tr>
+                    <tr><td class="text-muted">НП</td><td>{{ hearing.case.taxpayer.name }}</td></tr>
+                    <tr><td class="text-muted">ИИН/БИН</td><td class="font-monospace">{{ hearing.case.taxpayer.iin_bin }}</td></tr>
+                    <tr><td class="text-muted">Дата</td><td>{{ hearing.hearing_date|date:"d.m.Y" }}</td></tr>
+                    <tr><td class="text-muted">Время</td><td>{{ hearing.hearing_time|time:"H:i"|default:"—" }}</td></tr>
+                    <tr><td class="text-muted">Место</td><td>{{ hearing.location }}</td></tr>
+                    <tr><td class="text-muted">Формат</td><td>{{ hearing.get_format_display }}</td></tr>
+                    <tr><td class="text-muted">Статус</td><td>{{ hearing.get_status_display }}</td></tr>
+                    {% if hearing.notes %}
+                    <tr><td class="text-muted">Примечания</td><td>{{ hearing.notes }}</td></tr>
+                    {% endif %}
+                </table>
+
+                {% if hearing.participants %}
+                <div class="mt-3">
+                    <div class="text-muted small mb-1">Участники:</div>
+                    <ul class="list-unstyled mb-0">
+                        {% for p in hearing.participants %}
+                        <li><i class="bi bi-person text-muted"></i> {{ p }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-7 mb-3">
+        {% if protocol %}
+        <div class="card h-100 border-success">
+            <div class="card-header fw-semibold bg-success text-white">
+                <i class="bi bi-file-earmark-check"></i> Протокол заслушивания
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-3">
+                    <tr><td class="text-muted" style="width:45%">Номер протокола</td>
+                        <td class="fw-semibold">{{ protocol.protocol_number }}</td></tr>
+                    <tr><td class="text-muted">Дата протокола</td>
+                        <td>{{ protocol.protocol_date|date:"d.m.Y" }}</td></tr>
+                    <tr>
+                        <td class="text-muted">Дедлайн решения</td>
+                        <td>
+                            <strong class="{% if protocol.is_deadline_overdue %}text-danger{% elif protocol.days_until_deadline == 0 %}text-warning{% else %}text-success{% endif %}">
+                                {{ protocol.deadline_2days|date:"d.m.Y" }}
+                            </strong>
+                            {% if protocol.is_deadline_overdue %}
+                            <span class="badge bg-danger ms-1">Просрочен!</span>
+                            {% elif protocol.days_until_deadline is not None %}
+                            <span class="text-muted small">(осталось {{ protocol.days_until_deadline }} дн.)</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+                <div class="mb-3">
+                    <div class="text-muted small mb-1">Краткое содержание:</div>
+                    <div class="border rounded p-2 bg-light small">{{ protocol.result_summary }}</div>
+                </div>
+                {% if protocol.file_path %}
+                <a href="{% url 'documents:download' pk=0 %}" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-download"></i> Скачать протокол
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="card h-100">
+            <div class="card-header fw-semibold"><i class="bi bi-file-earmark-text"></i> Протокол</div>
+            <div class="card-body d-flex flex-column align-items-center justify-content-center text-muted" style="min-height:150px;">
+                <i class="bi bi-file-earmark-x" style="font-size:2.5rem;"></i>
+                <p class="mt-2">Протокол не оформлен</p>
+                {% if can_create_protocol %}
+                <a href="{% url 'hearings:protocol_create' pk=hearing.pk %}" class="btn btn-primary mt-1">
+                    <i class="bi bi-plus-lg"></i> Оформить протокол
+                </a>
+                {% elif hearing.status == 'scheduled' %}
+                <p class="small text-muted">Сначала зафиксируйте проведение заслушивания</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# Действия #}
+<div class="d-flex gap-2">
+    {% if can_complete %}
+    <a href="{% url 'hearings:complete' pk=hearing.pk %}" class="btn btn-success">
+        <i class="bi bi-check-circle"></i> Зафиксировать проведение
+    </a>
+    {% endif %}
+    {% if can_create_protocol %}
+    <a href="{% url 'hearings:protocol_create' pk=hearing.pk %}" class="btn btn-primary">
+        <i class="bi bi-file-earmark-plus"></i> Оформить протокол
+    </a>
+    {% endif %}
+    <a href="{% url 'cases:detail' pk=hearing.case.pk %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> К делу
+    </a>
+</div>
+{% endblock %}

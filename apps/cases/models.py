@@ -22,6 +22,7 @@ class CaseStatus(models.TextChoices):
     DER_SENT = "der_sent", "Запрос в ДЭР направлен"
     HEARING_SCHEDULED = "hearing_scheduled", "Заслушивание назначено"
     HEARING_DONE = "hearing_done", "Заслушивание проведено"
+    PROTOCOL_CREATED = "protocol_created", "Протокол оформлен"
     DECISION_PENDING = "decision_pending", "Ожидает решения"
     TERMINATED = "terminated", "Прекращено"
     AUDIT_INITIATED = "audit_initiated", "Инициирована проверка"
