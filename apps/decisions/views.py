@@ -3,12 +3,13 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect
-from django.views.generic import DetailView, FormView, ListView
+from django.views import View
+from django.views.generic import DetailView, FormView, ListView  # noqa: F401 ListView used in DecisionListView
 
 from apps.cases.models import AdministrativeCase, CaseStatus
-from .forms import DecisionReviewForm, TerminationCreateForm, TaxAuditCreateForm
+from .forms import TerminationCreateForm, TaxAuditCreateForm
 from .models import FinalDecision, DecisionStatus
-from .services import approve_decision, create_tax_audit, create_termination, reject_decision
+from .services import create_tax_audit, create_termination
 
 logger = logging.getLogger(__name__)
 
@@ -157,6 +158,16 @@ class DecisionDetailView(LoginRequiredMixin, DetailView):
             and self.object.case.status in ("terminated", "audit_approved", "completed")
             and self.request.user.role in ("admin", "operator")
         )
+        from apps.approvals.services import get_history
+        context["approval_history"] = get_history(self.object)
+        # Pending flow для кнопки "Согласовать"
+        from apps.approvals.models import ApprovalFlow, ApprovalResult
+        context["pending_flow"] = (
+            ApprovalFlow.objects
+            .filter(entity_type="decision", entity_id=self.object.pk, result=ApprovalResult.PENDING)
+            .order_by("-version")
+            .first()
+        )
         return context
 
     def post(self, request, *args, **kwargs):
@@ -174,47 +185,25 @@ class DecisionDetailView(LoginRequiredMixin, DetailView):
         return redirect("decisions:detail", pk=decision.pk)
 
 
-class DecisionApproveView(LoginRequiredMixin, FormView):
-    template_name = "decisions/approve.html"
-    form_class = DecisionReviewForm
+class DecisionApproveView(LoginRequiredMixin, View):
+    """Перенаправляет на ApprovalActionView для pending flow решения."""
 
-    def dispatch(self, request, *args, **kwargs):
-        if request.user.role not in ("admin", "reviewer"):
-            messages.error(request, "Согласование доступно только руководителю.")
-            return redirect("cases:list")
-
-        self.decision = get_object_or_404(
-            FinalDecision.objects.for_user(request.user).select_related(
-                "case", "case__taxpayer", "created_by"
-            ),
+    def get(self, request, *args, **kwargs):
+        from apps.approvals.models import ApprovalFlow, ApprovalResult
+        decision = get_object_or_404(
+            FinalDecision.objects.for_user(request.user),
             pk=kwargs["pk"],
         )
+        flow = (
+            ApprovalFlow.objects
+            .filter(entity_type="decision", entity_id=decision.pk, result=ApprovalResult.PENDING)
+            .order_by("-version")
+            .first()
+        )
+        if flow:
+            return redirect("approvals:action", pk=flow.pk)
+        messages.warning(request, "Активная очередь согласования не найдена.")
+        return redirect("decisions:detail", pk=decision.pk)
 
-        if self.decision.status != DecisionStatus.PENDING_APPROVAL:
-            messages.warning(request, "Решение уже рассмотрено.")
-            return redirect("decisions:detail", pk=self.decision.pk)
-
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["decision"] = self.decision
-        return context
-
-    def form_valid(self, form):
-        action = form.cleaned_data["action"]
-        try:
-            if action == "approve":
-                approve_decision(self.decision, self.request.user)
-                messages.success(self.request, "Решение утверждено.")
-            else:
-                reject_decision(
-                    self.decision,
-                    self.request.user,
-                    form.cleaned_data["rejection_comment"],
-                )
-                messages.warning(self.request, "Решение отклонено. Дело возвращено на доработку.")
-            return redirect("decisions:detail", pk=self.decision.pk)
-        except (PermissionDenied, ValueError) as e:
-            messages.error(self.request, str(e))
-            return self.form_invalid(form)
+    def post(self, request, *args, **kwargs):
+        return self.get(request, *args, **kwargs)

@@ -72,6 +72,18 @@ class CaseDetailView(LoginRequiredMixin, DetailView):
             .select_related("created_by")
             .order_by("-created_at")[:50]
         )
+        # История согласований по итоговому решению дела (если есть)
+        if hasattr(self.object, "final_decision"):
+            from apps.approvals.services import get_history
+            from apps.approvals.models import ApprovalFlow, ApprovalResult
+            decision = self.object.final_decision
+            context["approval_history"] = get_history(decision)
+            context["pending_flow"] = (
+                ApprovalFlow.objects
+                .filter(entity_type="decision", entity_id=decision.pk, result=ApprovalResult.PENDING)
+                .order_by("-version")
+                .first()
+            )
         return context
 
 

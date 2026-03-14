@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Рассмотрение решения — АППК{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'approvals:queue' %}" class="text-decoration-none text-muted small">
+        <i class="bi bi-arrow-left"></i> Очередь согласования
+    </a>
+    <h4 class="mb-0 mt-1">
+        <i class="bi bi-check2-square"></i> Рассмотрение:
+        {{ flow.get_entity_type_display }}
+        {% if flow.version > 1 %}<span class="badge bg-warning text-dark ms-1">Повтор v{{ flow.version }}</span>{% endif %}
+    </h4>
+</div>
+
+<div class="row">
+    {% if entity %}
+    <div class="col-md-7">
+        {# Карточка сущности #}
+        <div class="card mb-3">
+            <div class="card-header fw-semibold">
+                {% if flow.entity_type == 'decision' %}
+                {{ entity.get_decision_type_display }}
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    {% if flow.entity_type == 'decision' %}
+                    <tr>
+                        <td class="text-muted" style="width:40%">Дело</td>
+                        <td class="fw-semibold">
+                            <a href="{% url 'cases:detail' pk=entity.case.pk %}">{{ entity.case.case_number }}</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Налогоплательщик</td>
+                        <td>{{ entity.case.taxpayer.name }} ({{ entity.case.taxpayer.iin_bin }})</td>
+                    </tr>
+                    {% if entity.is_termination and entity.basis %}
+                    <tr>
+                        <td class="text-muted">Основание</td>
+                        <td>{{ entity.get_basis_display }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td class="text-muted">Составил</td>
+                        <td>{{ entity.created_by.get_full_name|default:entity.created_by.username }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Дата составления</td>
+                        <td>{{ entity.decision_date|date:"d.m.Y" }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td class="text-muted">Направлено</td>
+                        <td>{{ flow.sent_by.get_full_name|default:flow.sent_by.username }}
+                            · {{ flow.sent_at|date:"d.m.Y H:i" }}</td>
+                    </tr>
+                </table>
+
+                {% if flow.entity_type == 'decision' and entity.comment %}
+                <hr class="my-2">
+                <p class="small text-muted mb-1 fw-semibold">Обоснование:</p>
+                <p class="mb-0 small">{{ entity.comment|linebreaksbr }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Форма действия #}
+        <div class="card">
+            <div class="card-header fw-semibold">Решение руководителя</div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Комментарий
+                            <span class="text-muted">(обязателен при отклонении и возврате)</span>
+                        </label>
+                        <textarea name="comment" rows="3" class="form-control"
+                                  placeholder="Комментарий к решению..."></textarea>
+                    </div>
+
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="submit" name="action" value="approve"
+                                class="btn btn-success"
+                                onclick="return confirm('Утвердить решение?')">
+                            <i class="bi bi-check-circle"></i> Утвердить
+                        </button>
+                        <button type="submit" name="action" value="return"
+                                class="btn btn-warning"
+                                onclick="return confirm('Вернуть на доработку? Оператор создаст новое решение.')">
+                            <i class="bi bi-arrow-return-left"></i> На доработку
+                        </button>
+                        <button type="submit" name="action" value="reject"
+                                class="btn btn-danger"
+                                onclick="return confirm('Отклонить решение?')">
+                            <i class="bi bi-x-circle"></i> Отклонить
+                        </button>
+                        <a href="{% url 'approvals:queue' %}" class="btn btn-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {# История согласований #}
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header fw-semibold"><i class="bi bi-clock-history"></i> История согласований</div>
+            <div class="card-body p-0">
+                {% if history %}
+                <ul class="list-group list-group-flush">
+                    {% for h in history %}
+                    <li class="list-group-item py-2 {% if h.id == flow.id %}list-group-item-warning{% endif %}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <span class="badge me-1
+                                    {% if h.result == 'approved' %}bg-success
+                                    {% elif h.result == 'rejected' %}bg-danger
+                                    {% elif h.result == 'returned' %}bg-warning text-dark
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ h.get_result_display }}
+                                </span>
+                                <span class="small text-muted">v{{ h.version }}</span>
+                            </div>
+                            <span class="text-muted small">{{ h.sent_at|date:"d.m.Y" }}</span>
+                        </div>
+                        {% if h.reviewed_by %}
+                        <div class="small text-muted mt-1">
+                            {{ h.reviewed_by.get_full_name|default:h.reviewed_by.username }}
+                            · {{ h.reviewed_at|date:"d.m.Y H:i" }}
+                        </div>
+                        {% endif %}
+                        {% if h.comment %}
+                        <div class="small mt-1 fst-italic">{{ h.comment }}</div>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted p-3 mb-0">Нет предыдущих итераций.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

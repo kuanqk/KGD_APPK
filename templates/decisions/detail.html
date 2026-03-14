@@ -26,17 +26,17 @@
 {% if decision.status == 'rejected' %}
 <div class="alert alert-danger">
     <i class="bi bi-x-circle"></i>
-    <strong>Решение отклонено.</strong>
-    {% if decision.rejection_comment %}Комментарий: {{ decision.rejection_comment }}{% endif %}
+    <strong>Решение отклонено/возвращено.</strong>
+    {% if decision.rejection_comment %} Комментарий: {{ decision.rejection_comment }}{% endif %}
     <br>
-    <small class="text-muted">Дело возвращено в статус «Протокол оформлен». Создайте новое решение.</small>
+    <small class="text-muted">Дело возвращено в статус «Протокол оформлен».</small>
 </div>
 {% elif decision.status == 'pending_approval' %}
 <div class="alert alert-warning">
     <i class="bi bi-hourglass-split"></i>
     Решение ожидает согласования руководителем.
-    {% if can_review %}
-    <a href="{% url 'decisions:review' pk=decision.pk %}" class="btn btn-sm btn-warning ms-2">
+    {% if pending_flow and can_review %}
+    <a href="{% url 'approvals:action' pk=pending_flow.pk %}" class="btn btn-sm btn-warning ms-2">
         <i class="bi bi-check2-square"></i> Рассмотреть
     </a>
     {% endif %}
@@ -137,10 +137,48 @@
 </div>
 {% endif %}
 
+{# История согласований #}
+{% if approval_history %}
+<div class="card mb-3">
+    <div class="card-header fw-semibold"><i class="bi bi-clock-history"></i> История согласований</div>
+    <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+            {% for h in approval_history %}
+            <li class="list-group-item py-2">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="badge me-1
+                            {% if h.result == 'approved' %}bg-success
+                            {% elif h.result == 'rejected' %}bg-danger
+                            {% elif h.result == 'returned' %}bg-warning text-dark
+                            {% else %}bg-secondary{% endif %}">
+                            {{ h.get_result_display }}
+                        </span>
+                        <span class="text-muted small">Итерация {{ h.version }}</span>
+                        {% if h.comment %}
+                        <span class="ms-2 small fst-italic">{{ h.comment }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-muted small text-nowrap ms-2">
+                        {% if h.reviewed_by %}
+                        {{ h.reviewed_by.get_full_name|default:h.reviewed_by.username }}
+                        · {{ h.reviewed_at|date:"d.m.Y H:i" }}
+                        {% else %}
+                        направлено {{ h.sent_at|date:"d.m.Y H:i" }}
+                        {% endif %}
+                    </div>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}
+
 {% if can_review or can_archive %}
 <div class="d-flex gap-2">
-    {% if can_review %}
-    <a href="{% url 'decisions:review' pk=decision.pk %}" class="btn btn-warning">
+    {% if can_review and pending_flow %}
+    <a href="{% url 'approvals:action' pk=pending_flow.pk %}" class="btn btn-warning">
         <i class="bi bi-check2-square"></i> Рассмотреть решение
     </a>
     {% endif %}

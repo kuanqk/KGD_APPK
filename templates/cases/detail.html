@@ -460,6 +460,51 @@
 </div>
 {% endif %}
 
+{# Блок: История согласований #}
+{% if approval_history %}
+<div class="card mb-3">
+    <div class="card-header fw-semibold"><i class="bi bi-clock-history"></i> История согласований</div>
+    <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+            {% for h in approval_history %}
+            <li class="list-group-item py-2">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <span class="badge me-1
+                            {% if h.result == 'approved' %}bg-success
+                            {% elif h.result == 'rejected' %}bg-danger
+                            {% elif h.result == 'returned' %}bg-warning text-dark
+                            {% else %}bg-secondary{% endif %}">
+                            {{ h.get_result_display }}
+                        </span>
+                        <span class="text-muted small">Итерация {{ h.version }}</span>
+                        {% if h.comment %}
+                        <span class="ms-2 small fst-italic">{{ h.comment }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-muted small text-nowrap ms-2">
+                        {% if h.reviewed_by %}
+                        {{ h.reviewed_by.get_full_name|default:h.reviewed_by.username }}
+                        · {{ h.reviewed_at|date:"d.m.Y H:i" }}
+                        {% else %}
+                        направлено {{ h.sent_at|date:"d.m.Y H:i" }}
+                        {% endif %}
+                    </div>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% if pending_flow and request.user.role in 'admin,reviewer' %}
+        <div class="p-3 border-top">
+            <a href="{% url 'approvals:action' pk=pending_flow.pk %}" class="btn btn-sm btn-warning">
+                <i class="bi bi-check2-square"></i> Рассмотреть текущую итерацию
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
 {# Блок: Лента событий #}
 <div class="card">
     <div class="card-header fw-semibold"><i class="bi bi-clock-history"></i> Лента событий</div>

@@ -88,6 +88,9 @@ def create_termination(
         },
     )
 
+    from apps.approvals.services import send_to_approval
+    send_to_approval(decision, user)
+
     logger.info("Termination decision created for case %s by %s", case.case_number, user)
     return decision
 
@@ -142,6 +145,9 @@ def create_tax_audit(
         entity_id=decision.id,
         details={"case_number": case.case_number},
     )
+
+    from apps.approvals.services import send_to_approval
+    send_to_approval(decision, user)
 
     logger.info("Tax audit decision created for case %s by %s", case.case_number, user)
     return decision

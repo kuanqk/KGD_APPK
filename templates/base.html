@@ -36,7 +36,7 @@
                 </li>
                 {% if user.role == 'admin' or user.role == 'reviewer' %}
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'decisions:list' %}"><i class="bi bi-check2-square"></i> Согласование</a>
+                    <a class="nav-link" href="{% url 'approvals:queue' %}"><i class="bi bi-check2-square"></i> Согласование</a>
                 </li>
                 {% endif %}
                 {% if user.role == 'admin' %}
