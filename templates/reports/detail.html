@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}{{ meta.title }} — Отчёты — АППК{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'reports:dashboard' %}" class="text-decoration-none text-muted small">
+        <i class="bi bi-arrow-left"></i> Отчёты
+    </a>
+    <h4 class="mb-0 mt-1"><i class="bi bi-bar-chart-line"></i> {{ meta.title }}</h4>
+</div>
+
+{# Форма фильтров #}
+<div class="card mb-3">
+    <div class="card-header fw-semibold">
+        <i class="bi bi-funnel"></i> Фильтры
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label small mb-1">{{ form.date_from.label }}</label>
+                {{ form.date_from }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">{{ form.date_to.label }}</label>
+                {{ form.date_to }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">{{ form.region.label }}</label>
+                {{ form.region }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1">{{ form.department.label }}</label>
+                {{ form.department }}
+            </div>
+            {% if report_type not in 'revision_journal discipline_report' %}
+            <div class="col-md-2">
+                <label class="form-label small mb-1">{{ form.status.label }}</label>
+                {{ form.status }}
+            </div>
+            {% endif %}
+            <div class="col-md-auto">
+                <button type="submit" class="btn btn-sm btn-primary">
+                    <i class="bi bi-search"></i> Применить
+                </button>
+                <a href="{% url 'reports:detail' report_type=report_type %}" class="btn btn-sm btn-outline-secondary ms-1">
+                    Сбросить
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# Кнопки экспорта #}
+{% if can_export %}
+<div class="d-flex gap-2 mb-3">
+    <a href="{% url 'reports:export' report_type=report_type %}?format=xlsx&{{ request.GET.urlencode }}"
+       class="btn btn-sm btn-outline-success">
+        <i class="bi bi-file-earmark-excel"></i> Экспорт XLSX
+    </a>
+    <a href="{% url 'reports:export' report_type=report_type %}?format=pdf&{{ request.GET.urlencode }}"
+       class="btn btn-sm btn-outline-danger">
+        <i class="bi bi-file-earmark-pdf"></i> Экспорт PDF
+    </a>
+</div>
+{% endif %}
+
+{# Данные отчёта #}
+{% if error %}
+<div class="alert alert-danger"><i class="bi bi-exclamation-triangle"></i> {{ error }}</div>
+
+{% elif data is None %}
+<div class="alert alert-info">Примените фильтры чтобы сформировать отчёт, или нажмите «Применить» с пустыми полями.</div>
+
+{% elif report_type == 'avg_case_duration' %}
+{# Специальный рендер для avg_case_duration #}
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="card text-center border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-primary">{{ data.avg_days }}</div>
+                <div class="text-muted small">Среднее (дней)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="fs-2 fw-bold text-secondary">{{ data.total_closed }}</div>
+                <div class="text-muted small">Закрытых дел</div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card">
+    <div class="card-header fw-semibold">По типам завершения</div>
+    <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+            <thead class="table-light"><tr><th>Статус</th><th>Среднее (дней)</th></tr></thead>
+            <tbody>
+                {% for status_label, avg_days in data.by_status.items %}
+                <tr><td>{{ status_label }}</td><td>{{ avg_days }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% elif report_type == 'cases_by_status' or report_type == 'cases_by_region' %}
+{# dict-отчёты #}
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>{% if report_type == 'cases_by_status' %}Статус{% else %}Регион{% endif %}</th>
+                    <th>Количество дел</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key, count in data.items %}
+                <tr>
+                    <td>{{ key }}</td>
+                    <td><span class="badge bg-primary">{{ count }}</span></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="2" class="text-muted">Нет данных.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% elif report_type == 'discipline_report' %}
+{# Дисциплинарный отчёт — list[dict] #}
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+                <tr><th>Сотрудник</th><th>Назначено</th><th class="text-danger">Просрочено</th><th class="text-success">Завершено</th></tr>
+            </thead>
+            <tbody>
+                {% for row in data %}
+                <tr class="{% if row.overdue %}table-warning{% endif %}">
+                    <td>{{ row.user }}</td>
+                    <td>{{ row.assigned }}</td>
+                    <td>
+                        {% if row.overdue %}
+                        <span class="badge bg-danger">{{ row.overdue }}</span>
+                        {% else %}0{% endif %}
+                    </td>
+                    <td>{{ row.completed }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-muted">Нет данных.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% elif report_type == 'revision_journal' %}
+{# Журнал возвратов — QS ApprovalFlow #}
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Тип</th><th>ID</th><th>v</th>
+                    <th>Направил</th><th>Дата</th>
+                    <th>Рецензент</th><th>Рассмотрено</th>
+                    <th>Комментарий</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for flow in data %}
+                <tr>
+                    <td><span class="badge bg-secondary">{{ flow.get_entity_type_display }}</span></td>
+                    <td>{{ flow.entity_id }}</td>
+                    <td>{{ flow.version }}</td>
+                    <td class="small">{{ flow.sent_by|default:"—" }}</td>
+                    <td class="small text-muted">{{ flow.sent_at|date:"d.m.Y" }}</td>
+                    <td class="small">{{ flow.reviewed_by|default:"—" }}</td>
+                    <td class="small text-muted">{{ flow.reviewed_at|date:"d.m.Y"|default:"—" }}</td>
+                    <td class="small fst-italic">{{ flow.comment|truncatechars:60 }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-muted">Нет возвратов.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% else %}
+{# Универсальный рендер QS дел #}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">Результаты</span>
+        <span class="text-muted small">Показано до 500 записей</span>
+    </div>
+    <div class="card-body p-0">
+        {% if data %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        {% if meta.columns %}
+                        {% for col in meta.columns %}<th>{{ col }}</th>{% endfor %}
+                        {% else %}
+                        <th>Номер дела</th><th>Налогоплательщик</th><th>Регион</th><th>Статус</th><th>Дата</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for case in data %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'cases:detail' pk=case.pk %}" class="text-decoration-none fw-semibold">
+                                {{ case.case_number }}
+                            </a>
+                        </td>
+                        <td>{{ case.taxpayer.name }}</td>
+                        {% if report_type == 'cases_registry' %}
+                        <td class="font-monospace small">{{ case.taxpayer.iin_bin }}</td>
+                        {% endif %}
+                        <td>{{ case.region }}</td>
+                        {% if report_type == 'cases_registry' %}
+                        <td class="small">{{ case.department|default:"—" }}</td>
+                        {% endif %}
+                        <td class="small">{{ case.responsible_user|default:"—" }}</td>
+                        {% if report_type not in 'terminated_cases audit_initiated_cases' %}
+                        <td>
+                            <span class="badge
+                                {% if case.status == 'terminated' or case.status == 'completed' %}bg-success
+                                {% elif case.status == 'archived' %}bg-dark
+                                {% elif case.status == 'protocol_created' %}bg-warning text-dark
+                                {% else %}bg-primary{% endif %}">
+                                {{ case.get_status_display }}
+                            </span>
+                        </td>
+                        {% endif %}
+                        <td class="text-muted small">
+                            {% if case.closed_at %}{{ case.closed_at|date:"d.m.Y" }}
+                            {% else %}{{ case.created_at|date:"d.m.Y" }}{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted p-3 mb-0">Нет данных по выбранным фильтрам.</p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
