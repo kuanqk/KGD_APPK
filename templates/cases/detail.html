@@ -384,6 +384,82 @@
     </div>
 </div>
 
+{# Блок: Итоговое решение #}
+{% if case.status == 'protocol_created' or case.status == 'termination_pending' or case.status == 'audit_pending' or case.status == 'terminated' or case.status == 'audit_approved' or case.status == 'completed' or case.status == 'archived' %}
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold"><i class="bi bi-gavel"></i> Итоговое решение</span>
+        {% if case.status == 'protocol_created' and not case.final_decision %}
+        {% if request.user.role == 'admin' or request.user.role == 'operator' %}
+        <div class="d-flex gap-2">
+            <a href="{% url 'decisions:terminate' case_pk=case.pk %}" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-x-circle"></i> Прекратить дело
+            </a>
+            <a href="{% url 'decisions:tax_audit' case_pk=case.pk %}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-search"></i> Назначить проверку
+            </a>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if case.final_decision %}
+        {% with d=case.final_decision %}
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <p class="mb-1">
+                    <strong>{{ d.get_decision_type_display }}</strong>
+                    <span class="badge ms-2
+                        {% if d.status == 'approved' %}bg-success
+                        {% elif d.status == 'rejected' %}bg-danger
+                        {% elif d.status == 'pending_approval' %}bg-warning text-dark
+                        {% else %}bg-secondary{% endif %}">
+                        {{ d.get_status_display }}
+                    </span>
+                </p>
+                {% if d.is_termination and d.basis %}
+                <p class="text-muted small mb-1">Основание: {{ d.get_basis_display }}</p>
+                {% endif %}
+                <p class="text-muted small mb-0">
+                    Составил: {{ d.created_by.get_full_name|default:d.created_by.username|default:"—" }}
+                    · {{ d.decision_date|date:"d.m.Y" }}
+                </p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'decisions:detail' pk=d.pk %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-eye"></i> Открыть
+                </a>
+                {% if d.status == 'pending_approval' and request.user.role in 'admin,reviewer' %}
+                <a href="{% url 'decisions:review' pk=d.pk %}" class="btn btn-sm btn-warning">
+                    <i class="bi bi-check2-square"></i> Согласовать
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% if d.status == 'rejected' %}
+        <div class="alert alert-danger mt-2 mb-0 py-2">
+            <i class="bi bi-exclamation-triangle"></i>
+            Отклонено. {{ d.rejection_comment }}
+            {% if request.user.role == 'admin' or request.user.role == 'operator' %}
+            — Создайте новое решение:
+            <a href="{% url 'decisions:terminate' case_pk=case.pk %}" class="btn btn-sm btn-outline-danger ms-1">Прекратить</a>
+            <a href="{% url 'decisions:tax_audit' case_pk=case.pk %}" class="btn btn-sm btn-outline-primary ms-1">Проверка</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% endwith %}
+        {% else %}
+        <p class="text-muted mb-0">
+            Решение не создано.
+            {% if case.status == 'protocol_created' and request.user.role == 'admin' or request.user.role == 'operator' %}
+            Выберите сценарий завершения дела выше.
+            {% endif %}
+        </p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
 {# Блок: Лента событий #}
 <div class="card">
     <div class="card-header fw-semibold"><i class="bi bi-clock-history"></i> Лента событий</div>

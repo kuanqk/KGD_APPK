@@ -23,9 +23,10 @@ class CaseStatus(models.TextChoices):
     HEARING_SCHEDULED = "hearing_scheduled", "Заслушивание назначено"
     HEARING_DONE = "hearing_done", "Заслушивание проведено"
     PROTOCOL_CREATED = "protocol_created", "Протокол оформлен"
-    DECISION_PENDING = "decision_pending", "Ожидает решения"
+    TERMINATION_PENDING = "termination_pending", "Решение о прекращении на согласовании"
     TERMINATED = "terminated", "Прекращено"
-    AUDIT_INITIATED = "audit_initiated", "Инициирована проверка"
+    AUDIT_PENDING = "audit_pending", "Инициирование проверки на согласовании"
+    AUDIT_APPROVED = "audit_approved", "Проверка назначена"
     COMPLETED = "completed", "Завершено"
     ARCHIVED = "archived", "Архив"
 

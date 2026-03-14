@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Решение по делу {{ decision.case.case_number }} — АППК{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'cases:detail' pk=decision.case.pk %}" class="text-decoration-none text-muted small">
+        <i class="bi bi-arrow-left"></i> Дело {{ decision.case.case_number }}
+    </a>
+    <h4 class="mb-0 mt-1">
+        {% if decision.is_termination %}
+        <i class="bi bi-x-circle"></i> Решение о прекращении дела
+        {% else %}
+        <i class="bi bi-search"></i> Инициирование налоговой проверки
+        {% endif %}
+        <span class="badge ms-2
+            {% if decision.status == 'approved' %}bg-success
+            {% elif decision.status == 'rejected' %}bg-danger
+            {% elif decision.status == 'pending_approval' %}bg-warning text-dark
+            {% else %}bg-secondary{% endif %}">
+            {{ decision.get_status_display }}
+        </span>
+    </h4>
+</div>
+
+{% if decision.status == 'rejected' %}
+<div class="alert alert-danger">
+    <i class="bi bi-x-circle"></i>
+    <strong>Решение отклонено.</strong>
+    {% if decision.rejection_comment %}Комментарий: {{ decision.rejection_comment }}{% endif %}
+    <br>
+    <small class="text-muted">Дело возвращено в статус «Протокол оформлен». Создайте новое решение.</small>
+</div>
+{% elif decision.status == 'pending_approval' %}
+<div class="alert alert-warning">
+    <i class="bi bi-hourglass-split"></i>
+    Решение ожидает согласования руководителем.
+    {% if can_review %}
+    <a href="{% url 'decisions:review' pk=decision.pk %}" class="btn btn-sm btn-warning ms-2">
+        <i class="bi bi-check2-square"></i> Рассмотреть
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header fw-semibold">Реквизиты решения</div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted" style="width:45%">Тип решения</td>
+                        <td class="fw-semibold">{{ decision.get_decision_type_display }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Статус</td>
+                        <td>{{ decision.get_status_display }}</td>
+                    </tr>
+                    {% if decision.is_termination and decision.basis %}
+                    <tr>
+                        <td class="text-muted">Основание</td>
+                        <td>{{ decision.get_basis_display }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td class="text-muted">Дата составления</td>
+                        <td>{{ decision.decision_date|date:"d.m.Y" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Составил</td>
+                        <td>{{ decision.created_by.get_full_name|default:decision.created_by.username|default:"—" }}</td>
+                    </tr>
+                    {% if decision.approver %}
+                    <tr>
+                        <td class="text-muted">Согласовал</td>
+                        <td>{{ decision.approver.get_full_name|default:decision.approver.username }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Дата согласования</td>
+                        <td>{{ decision.approved_at|date:"d.m.Y H:i" }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header fw-semibold">Дело</div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted" style="width:45%">Номер дела</td>
+                        <td class="fw-semibold">
+                            <a href="{% url 'cases:detail' pk=decision.case.pk %}">{{ decision.case.case_number }}</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Статус дела</td>
+                        <td>{{ decision.case.get_status_display }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Налогоплательщик</td>
+                        <td>{{ decision.case.taxpayer.name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">ИИН/БИН</td>
+                        <td class="font-monospace">{{ decision.case.taxpayer.iin_bin }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Ответственный</td>
+                        <td>{{ decision.responsible.get_full_name|default:decision.responsible.username|default:"—" }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header fw-semibold">Обоснование</div>
+    <div class="card-body">
+        <p class="mb-0">{{ decision.comment|linebreaksbr }}</p>
+    </div>
+</div>
+
+{% if decision.file_path %}
+<div class="card mb-3">
+    <div class="card-header fw-semibold"><i class="bi bi-file-earmark-pdf"></i> Документ решения</div>
+    <div class="card-body">
+        <a href="{{ decision.file_path }}" class="btn btn-outline-secondary" target="_blank">
+            <i class="bi bi-download"></i> Скачать PDF
+        </a>
+    </div>
+</div>
+{% endif %}
+
+{% if can_review or can_archive %}
+<div class="d-flex gap-2">
+    {% if can_review %}
+    <a href="{% url 'decisions:review' pk=decision.pk %}" class="btn btn-warning">
+        <i class="bi bi-check2-square"></i> Рассмотреть решение
+    </a>
+    {% endif %}
+
+    {% if can_archive %}
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="archive">
+        <button type="submit" class="btn btn-outline-secondary"
+                onclick="return confirm('Перевести дело в архив?')">
+            <i class="bi bi-archive"></i> В архив
+        </button>
+    </form>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Прекратить дело — {{ case.case_number }} — АППК{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'cases:detail' pk=case.pk %}" class="text-decoration-none text-muted small">
+        <i class="bi bi-arrow-left"></i> Дело {{ case.case_number }}
+    </a>
+    <h4 class="mb-0 mt-1"><i class="bi bi-x-circle"></i> Решение о прекращении дела</h4>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i>
+            Прекращение дела — <strong>необратимое действие</strong> после утверждения руководителем.
+            Убедитесь, что основание соответствует материалам дела и протоколу заслушивания.
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header fw-semibold">Реквизиты дела</div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr><td class="text-muted" style="width:35%">Дело</td>
+                        <td class="fw-semibold">{{ case.case_number }}</td></tr>
+                    <tr><td class="text-muted">Налогоплательщик</td>
+                        <td>{{ case.taxpayer.name }} ({{ case.taxpayer.iin_bin }})</td></tr>
+                    <tr><td class="text-muted">Текущий статус</td>
+                        <td>{{ case.get_status_display }}</td></tr>
+                    <tr><td class="text-muted">Протоколов</td>
+                        <td>{{ case.protocols.count }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header fw-semibold">Параметры решения</div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Основание <span class="text-danger">*</span></label>
+                        {% for val, label in form.fields.basis.choices %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="basis"
+                                   id="basis_{{ val }}" value="{{ val }}"
+                                   {% if form.basis.value == val %}checked{% endif %}>
+                            <label class="form-check-label" for="basis_{{ val }}">{{ label }}</label>
+                        </div>
+                        {% endfor %}
+                        {% for e in form.basis.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold small">Обоснование <span class="text-danger">*</span></label>
+                        <textarea name="comment" rows="5"
+                                  class="form-control{% if form.comment.errors %} is-invalid{% endif %}"
+                                  placeholder="Подробно опишите основание для прекращения дела...">{{ form.comment.value|default:'' }}</textarea>
+                        {% for e in form.comment.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-danger"
+                                onclick="return confirm('Создать решение о прекращении дела?')">
+                            <i class="bi bi-x-circle"></i> Создать решение
+                        </button>
+                        <a href="{% url 'cases:detail' pk=case.pk %}" class="btn btn-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

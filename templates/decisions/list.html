@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Согласование решений — АППК{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-check2-square"></i> Согласование решений</h4>
+    <div class="d-flex gap-2">
+        <a href="?status=" class="btn btn-sm {% if not status_filter %}btn-secondary{% else %}btn-outline-secondary{% endif %}">Все</a>
+        <a href="?status=pending_approval" class="btn btn-sm {% if status_filter == 'pending_approval' %}btn-warning{% else %}btn-outline-warning{% endif %}">На согласовании</a>
+        <a href="?status=approved" class="btn btn-sm {% if status_filter == 'approved' %}btn-success{% else %}btn-outline-success{% endif %}">Утверждено</a>
+        <a href="?status=rejected" class="btn btn-sm {% if status_filter == 'rejected' %}btn-danger{% else %}btn-outline-danger{% endif %}">Отклонено</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if decisions %}
+        <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Дело</th>
+                    <th>Налогоплательщик</th>
+                    <th>Тип решения</th>
+                    <th>Статус</th>
+                    <th>Составил</th>
+                    <th>Дата</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in decisions %}
+                <tr>
+                    <td class="fw-semibold">
+                        <a href="{% url 'cases:detail' pk=d.case.pk %}" class="text-decoration-none">
+                            {{ d.case.case_number }}
+                        </a>
+                    </td>
+                    <td>{{ d.case.taxpayer.name }}</td>
+                    <td>{{ d.get_decision_type_display }}</td>
+                    <td>
+                        <span class="badge
+                            {% if d.status == 'approved' %}bg-success
+                            {% elif d.status == 'rejected' %}bg-danger
+                            {% elif d.status == 'pending_approval' %}bg-warning text-dark
+                            {% else %}bg-secondary{% endif %}">
+                            {{ d.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="small">{{ d.created_by.get_full_name|default:d.created_by.username|default:"—" }}</td>
+                    <td class="text-muted small">{{ d.decision_date|date:"d.m.Y" }}</td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <a href="{% url 'decisions:detail' pk=d.pk %}" class="btn btn-sm btn-outline-secondary py-0">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            {% if d.status == 'pending_approval' and request.user.role in 'admin,reviewer' %}
+                            <a href="{% url 'decisions:review' pk=d.pk %}" class="btn btn-sm btn-warning py-0">
+                                <i class="bi bi-check2-square"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if is_paginated %}
+        <div class="p-3">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}">‹</a>
+                    </li>
+                    {% endif %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}">›</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <p class="text-muted p-3 mb-0">
+            {% if not status_filter %}
+            Решений на согласовании нет.
+            {% else %}
+            Нет решений с выбранным статусом.
+            {% endif %}
+        </p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
