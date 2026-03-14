@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm 2.5cm 2cm 3cm;
+        }
+        body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 12pt;
+            line-height: 1.5;
+            color: #000;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 24pt;
+        }
+        .header .org-name {
+            font-weight: bold;
+            font-size: 11pt;
+            text-transform: uppercase;
+        }
+        .header .doc-title {
+            font-weight: bold;
+            font-size: 13pt;
+            margin-top: 16pt;
+        }
+        .header .doc-number {
+            font-size: 11pt;
+            margin-top: 4pt;
+        }
+        .body-content {
+            text-align: justify;
+        }
+        .footer {
+            margin-top: 36pt;
+        }
+        .signature-block {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 48pt;
+        }
+        .requisites {
+            border: 1px solid #ccc;
+            padding: 8pt;
+            font-size: 10pt;
+            margin-bottom: 16pt;
+        }
+        .requisites table { width: 100%; }
+        .requisites td { padding: 2pt 6pt; }
+        .requisites td:first-child { font-weight: bold; white-space: nowrap; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="org-name">Комитет государственных доходов<br>Министерства финансов Республики Казахстан</div>
+        <div class="doc-title">{{ doc_type_display|upper }}</div>
+        <div class="doc-number">{{ context.date_today }}</div>
+    </div>
+
+    <div class="requisites">
+        <table>
+            <tr><td>Дело №:</td><td>{{ context.case_number }}</td></tr>
+            <tr><td>Налогоплательщик:</td><td>{{ context.taxpayer_name }}</td></tr>
+            <tr><td>ИИН/БИН:</td><td>{{ context.taxpayer_iin }}</td></tr>
+            <tr><td>Регион:</td><td>{{ context.case_region }}</td></tr>
+        </table>
+    </div>
+
+    <div class="body-content">
+        {{ body }}
+    </div>
+
+    <div class="footer">
+        <div class="signature-block">
+            <div>
+                <p>{{ context.responsible_position }}</p>
+                <p>{{ context.responsible_name }}</p>
+            </div>
+            <div style="text-align:right;">
+                <p>________________</p>
+                <p>(подпись)</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

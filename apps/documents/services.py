@@ -1,0 +1,218 @@
+import logging
+import os
+from datetime import date
+from pathlib import Path
+
+from django.conf import settings
+from django.db import transaction
+from django.template import Context, Template
+
+from apps.audit.services import audit_log
+from .models import CaseDocument, DocumentStatus, DocumentTemplate, DocumentType
+
+logger = logging.getLogger(__name__)
+
+
+def generate_doc_number(doc_type: str) -> str:
+    """Генерирует номер документа формата <PREFIX>-ГГГГ-NNNNN."""
+    prefixes = {
+        DocumentType.NOTICE: "ИЗВ",
+        DocumentType.PRELIMINARY_DECISION: "ПР",
+        DocumentType.INSPECTION_ACT: "АКТ",
+        DocumentType.DER_REQUEST: "ДЭР",
+        DocumentType.HEARING_PROTOCOL: "ПРТ",
+        DocumentType.TERMINATION_DECISION: "ПРК",
+        DocumentType.AUDIT_INITIATION: "ВНП",
+        DocumentType.AUDIT_ORDER: "ПРК",
+    }
+    prefix = prefixes.get(doc_type, "ДОК")
+    year = date.today().year
+    full_prefix = f"{prefix}-{year}-"
+
+    last = (
+        CaseDocument.objects
+        .filter(doc_number__startswith=full_prefix)
+        .order_by("-doc_number")
+        .values_list("doc_number", flat=True)
+        .first()
+    )
+    seq = 1
+    if last:
+        try:
+            seq = int(last.split("-")[-1]) + 1
+        except (ValueError, IndexError):
+            seq = 1
+    return f"{full_prefix}{seq:05d}"
+
+
+def get_document_context(case) -> dict:
+    """Формирует контекст подстановки для шаблона документа."""
+    today = date.today()
+    responsible = case.responsible_user
+    return {
+        "case_number": case.case_number,
+        "case_basis": case.get_basis_display(),
+        "case_region": case.region,
+        "case_department": case.department or "",
+        "case_status": case.get_status_display(),
+        "taxpayer_name": case.taxpayer.name,
+        "taxpayer_iin": case.taxpayer.iin_bin,
+        "taxpayer_type": case.taxpayer.get_taxpayer_type_display(),
+        "taxpayer_address": case.taxpayer.address or "",
+        "taxpayer_phone": case.taxpayer.phone or "",
+        "taxpayer_email": case.taxpayer.email or "",
+        "date_today": today.strftime("%d.%m.%Y"),
+        "date_today_full": _format_date_full(today),
+        "responsible_name": responsible.get_full_name() if responsible else "",
+        "responsible_position": responsible.position if responsible else "",
+    }
+
+
+def _format_date_full(d: date) -> str:
+    months = [
+        "", "января", "февраля", "марта", "апреля", "мая", "июня",
+        "июля", "августа", "сентября", "октября", "ноября", "декабря",
+    ]
+    return f"{d.day} {months[d.month]} {d.year} года"
+
+
+def _render_template_body(body_template: str, context: dict) -> str:
+    """Рендерит строку шаблона через Django Template engine."""
+    t = Template(body_template)
+    return t.render(Context(context))
+
+
+def _render_pdf(html_content: str) -> bytes:
+    """Конвертирует HTML в PDF через WeasyPrint."""
+    try:
+        from weasyprint import HTML
+        return HTML(string=html_content, base_url=str(settings.BASE_DIR)).write_pdf()
+    except ImportError:
+        logger.warning("WeasyPrint не установлен — возвращаем HTML как bytes")
+        return html_content.encode("utf-8")
+
+
+def _save_pdf_file(doc_number: str, pdf_bytes: bytes) -> str:
+    """Сохраняет PDF в media/documents/ГГГГ/ММ/ и возвращает относительный путь."""
+    today = date.today()
+    rel_dir = Path("documents") / str(today.year) / f"{today.month:02d}"
+    abs_dir = Path(settings.MEDIA_ROOT) / rel_dir
+    abs_dir.mkdir(parents=True, exist_ok=True)
+
+    filename = f"{doc_number}.pdf"
+    abs_path = abs_dir / filename
+    abs_path.write_bytes(pdf_bytes)
+
+    return str(rel_dir / filename)
+
+
+@transaction.atomic
+def generate_document(case, doc_type: str, user) -> CaseDocument:
+    """
+    Генерирует документ для дела:
+    1. Берёт активный шаблон нужного типа
+    2. Рендерит HTML → PDF
+    3. Сохраняет CaseDocument
+    4. Пишет в AuditLog
+    """
+    template = DocumentTemplate.objects.filter(doc_type=doc_type, is_active=True).first()
+    if not template:
+        raise ValueError(f"Активный шаблон типа '{doc_type}' не найден.")
+
+    context = get_document_context(case)
+    context["doc_type_display"] = dict(DocumentType.choices).get(doc_type, doc_type)
+
+    # Рендер тела шаблона
+    rendered_body = _render_template_body(template.body_template, context)
+
+    # Оборачиваем в PDF-шаблон
+    from django.template.loader import render_to_string
+    html_content = render_to_string(
+        "documents/pdf/base.html",
+        {"body": rendered_body, "context": context, "doc_type_display": context["doc_type_display"]},
+    )
+
+    pdf_bytes = _render_pdf(html_content)
+
+    doc_number = generate_doc_number(doc_type)
+    file_path = _save_pdf_file(doc_number, pdf_bytes)
+
+    # Определяем версию (если уже есть документы того же типа по делу)
+    existing_count = CaseDocument.objects.filter(case=case, doc_type=doc_type).count()
+    version = existing_count + 1
+
+    doc = CaseDocument.objects.create(
+        case=case,
+        template=template,
+        doc_type=doc_type,
+        doc_number=doc_number,
+        version=version,
+        status=DocumentStatus.GENERATED,
+        file_path=file_path,
+        created_by=user,
+        metadata={
+            "template_version": template.version,
+            "context_snapshot": {k: v for k, v in context.items()},
+        },
+    )
+
+    audit_log(
+        user=user,
+        action="document_generated",
+        entity_type="document",
+        entity_id=doc.id,
+        details={
+            "doc_number": doc_number,
+            "doc_type": doc_type,
+            "case_number": case.case_number,
+            "version": version,
+        },
+    )
+
+    logger.info("Document generated: %s for case %s by %s", doc_number, case.case_number, user)
+    return doc
+
+
+@transaction.atomic
+def create_new_version(existing_doc: CaseDocument, user) -> CaseDocument:
+    """
+    Создаёт новую версию документа.
+    Если старый подписан — отменяет его, создаёт новый.
+    """
+    case = existing_doc.case
+    doc_type = existing_doc.doc_type
+
+    if existing_doc.status == DocumentStatus.SIGNED:
+        existing_doc.status = DocumentStatus.CANCELLED
+        existing_doc.save(update_fields=["status"])
+
+        audit_log(
+            user=user,
+            action="document_cancelled",
+            entity_type="document",
+            entity_id=existing_doc.id,
+            details={"reason": "new_version_created", "doc_number": existing_doc.doc_number},
+        )
+
+    return generate_document(case, doc_type, user)
+
+
+@transaction.atomic
+def change_document_status(doc: CaseDocument, new_status: str, user) -> CaseDocument:
+    """Меняет статус документа с аудитом."""
+    old_status = doc.status
+    doc.status = new_status
+    doc.save(update_fields=["status"])
+
+    audit_log(
+        user=user,
+        action="document_status_changed",
+        entity_type="document",
+        entity_id=doc.id,
+        details={
+            "doc_number": doc.doc_number,
+            "from": old_status,
+            "to": new_status,
+        },
+    )
+    return doc

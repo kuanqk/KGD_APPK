@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}{{ doc.doc_number }} — АППК{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'cases:detail' pk=doc.case.pk %}" class="text-decoration-none text-muted small">
+        <i class="bi bi-arrow-left"></i> Дело {{ doc.case.case_number }}
+    </a>
+    <h4 class="mb-0 mt-1">
+        <i class="bi bi-file-earmark-text"></i> {{ doc.doc_number }}
+        <span class="badge ms-2
+            {% if doc.status == 'signed' %}bg-success
+            {% elif doc.status == 'cancelled' %}bg-danger
+            {% elif doc.status == 'generated' %}bg-primary
+            {% else %}bg-secondary{% endif %}">
+            {{ doc.get_status_display }}
+        </span>
+        {% if doc.version > 1 %}
+        <span class="badge bg-warning text-dark ms-1">версия {{ doc.version }}</span>
+        {% endif %}
+    </h4>
+</div>
+
+<div class="row">
+    <div class="col-md-5 mb-3">
+        <div class="card">
+            <div class="card-header fw-semibold"><i class="bi bi-info-circle"></i> Реквизиты</div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted" style="width:45%">Номер</td>
+                        <td class="fw-semibold">{{ doc.doc_number }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Тип</td>
+                        <td>{{ doc.get_doc_type_display }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Версия</td>
+                        <td>{{ doc.version }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Статус</td>
+                        <td>{{ doc.get_status_display }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Дело</td>
+                        <td>
+                            <a href="{% url 'cases:detail' pk=doc.case.pk %}">{{ doc.case.case_number }}</a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Налогоплательщик</td>
+                        <td>{{ doc.case.taxpayer.name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Шаблон</td>
+                        <td>{{ doc.template|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Создал</td>
+                        <td>{{ doc.created_by.get_full_name|default:doc.created_by.username|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Дата создания</td>
+                        <td>{{ doc.created_at|date:"d.m.Y H:i" }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-7 mb-3">
+        <div class="card h-100">
+            <div class="card-header fw-semibold"><i class="bi bi-file-pdf"></i> Документ</div>
+            <div class="card-body d-flex flex-column align-items-center justify-content-center" style="min-height:200px;">
+                {% if doc.file_path %}
+                <i class="bi bi-file-earmark-pdf text-danger" style="font-size:4rem;"></i>
+                <p class="mt-2 text-muted">{{ doc.doc_number }}.pdf</p>
+                <a href="{% url 'documents:download' pk=doc.pk %}" class="btn btn-outline-danger mt-1">
+                    <i class="bi bi-download"></i> Скачать PDF
+                </a>
+                {% else %}
+                <p class="text-muted">Файл не сформирован.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Действия #}
+<div class="d-flex gap-2 flex-wrap">
+    {% if doc.file_path %}
+    <a href="{% url 'documents:download' pk=doc.pk %}" class="btn btn-outline-danger">
+        <i class="bi bi-download"></i> Скачать
+    </a>
+    {% endif %}
+
+    {% if can_create_new_version %}
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="new_version">
+        <button type="submit" class="btn btn-warning"
+                onclick="return confirm('Создать новую версию? Текущий документ будет отменён.')">
+            <i class="bi bi-arrow-clockwise"></i> Новая версия
+        </button>
+    </form>
+    {% endif %}
+
+    <a href="{% url 'cases:detail' pk=doc.case.pk %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> К делу
+    </a>
+</div>
+{% endblock %}

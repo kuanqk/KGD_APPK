@@ -118,6 +118,68 @@
     </div>
 </div>
 
+{# Блок: Процессуальные документы #}
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold"><i class="bi bi-file-earmark-text"></i> Процессуальные документы</span>
+        {% if request.user.role == 'admin' or request.user.role == 'operator' %}
+        <a href="{% url 'documents:create' case_pk=case.pk %}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-plus-lg"></i> Сформировать документ
+        </a>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        {% with documents=case.documents.all %}
+        {% if documents %}
+        <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Номер</th>
+                    <th>Тип</th>
+                    <th>Версия</th>
+                    <th>Статус</th>
+                    <th>Дата</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in documents %}
+                <tr>
+                    <td>
+                        <a href="{% url 'documents:detail' pk=doc.pk %}" class="text-decoration-none fw-semibold">
+                            {{ doc.doc_number }}
+                        </a>
+                    </td>
+                    <td>{{ doc.get_doc_type_display }}</td>
+                    <td>v{{ doc.version }}</td>
+                    <td>
+                        <span class="badge
+                            {% if doc.status == 'signed' %}bg-success
+                            {% elif doc.status == 'cancelled' %}bg-danger
+                            {% elif doc.status == 'generated' %}bg-primary
+                            {% else %}bg-secondary{% endif %}">
+                            {{ doc.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="text-muted small">{{ doc.created_at|date:"d.m.Y" }}</td>
+                    <td>
+                        {% if doc.file_path %}
+                        <a href="{% url 'documents:download' pk=doc.pk %}" class="btn btn-xs btn-outline-secondary btn-sm py-0">
+                            <i class="bi bi-download"></i>
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted p-3 mb-0">Документов нет.</p>
+        {% endif %}
+        {% endwith %}
+    </div>
+</div>
+
 {# Блок: Лента событий #}
 <div class="card">
     <div class="card-header fw-semibold"><i class="bi bi-clock-history"></i> Лента событий</div>
