@@ -180,6 +180,95 @@
     </div>
 </div>
 
+{# Блок: Вручение #}
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold"><i class="bi bi-send"></i> Вручение</span>
+        {% if request.user.role == 'admin' or request.user.role == 'operator' %}
+        <div class="d-flex gap-2">
+            <a href="{% url 'delivery:create' case_pk=case.pk %}?method=in_person"
+               class="btn btn-sm btn-outline-success">
+                <i class="bi bi-person-check"></i> Вручить нарочно
+            </a>
+            <a href="{% url 'delivery:create' case_pk=case.pk %}?method=registered_mail"
+               class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-envelope"></i> Отправить письмом
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        {% with deliveries=case.documents.all %}
+        {% comment %}Собираем записи доставки через документы дела{% endcomment %}
+        {% endwith %}
+        {% with all_deliveries=case|get_deliveries %}
+        {% if case.documents.exists %}
+        <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Документ</th>
+                    <th>Метод</th>
+                    <th>Трек-номер</th>
+                    <th>Статус</th>
+                    <th>Отправлено</th>
+                    <th>Результат</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in case.documents.all %}
+                {% for delivery in doc.deliveries.all %}
+                <tr>
+                    <td>
+                        <a href="{% url 'documents:detail' pk=doc.pk %}" class="text-decoration-none">
+                            {{ doc.doc_number }}
+                        </a>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark border">
+                            {% if delivery.method == 'in_person' %}
+                            <i class="bi bi-person-check"></i>
+                            {% else %}
+                            <i class="bi bi-envelope"></i>
+                            {% endif %}
+                            {{ delivery.get_method_display }}
+                        </span>
+                    </td>
+                    <td class="font-monospace small">{{ delivery.tracking_number|default:"—" }}</td>
+                    <td>
+                        <span class="badge
+                            {% if delivery.status == 'delivered' %}bg-success
+                            {% elif delivery.status == 'returned' %}bg-danger
+                            {% else %}bg-warning text-dark{% endif %}">
+                            {{ delivery.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="text-muted small">{{ delivery.sent_at|date:"d.m.Y"|default:"—" }}</td>
+                    <td class="text-muted small">
+                        {% if delivery.delivered_at %}{{ delivery.delivered_at|date:"d.m.Y" }}
+                        {% elif delivery.returned_at %}{{ delivery.returned_at|date:"d.m.Y" }}
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if delivery.status == 'pending' and request.user.role in 'admin,operator' %}
+                        <a href="{% url 'delivery:update' pk=delivery.pk %}"
+                           class="btn btn-sm btn-outline-primary py-0">
+                            Результат
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}{% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted p-3 mb-0">Отправок нет. Сначала сформируйте документ.</p>
+        {% endif %}
+        {% endwith %}
+    </div>
+</div>
+
 {# Блок: Лента событий #}
 <div class="card">
     <div class="card-header fw-semibold"><i class="bi bi-clock-history"></i> Лента событий</div>

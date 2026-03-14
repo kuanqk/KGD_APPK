@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Результат доставки — АППК{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'cases:detail' pk=case.pk %}" class="text-decoration-none text-muted small">
+        <i class="bi bi-arrow-left"></i> Дело {{ case.case_number }}
+    </a>
+    <h4 class="mb-0 mt-1"><i class="bi bi-check2-circle"></i> Зафиксировать результат доставки</h4>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+
+        {# Информация об отправке #}
+        <div class="card mb-3">
+            <div class="card-header fw-semibold">Информация об отправке</div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted" style="width:40%">Дело</td>
+                        <td><a href="{% url 'cases:detail' pk=case.pk %}">{{ case.case_number }}</a></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Налогоплательщик</td>
+                        <td>{{ case.taxpayer.name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Документ</td>
+                        <td>
+                            <a href="{% url 'documents:detail' pk=delivery.case_document.pk %}">
+                                {{ delivery.case_document.doc_number }}
+                            </a>
+                            ({{ delivery.case_document.get_doc_type_display }})
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Способ</td>
+                        <td>{{ delivery.get_method_display }}</td>
+                    </tr>
+                    {% if delivery.tracking_number %}
+                    <tr>
+                        <td class="text-muted">Трек-номер</td>
+                        <td class="font-monospace">{{ delivery.tracking_number }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td class="text-muted">Дата отправки</td>
+                        <td>{{ delivery.sent_at|date:"d.m.Y H:i"|default:"—" }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        {# Форма результата #}
+        <div class="card">
+            <div class="card-header fw-semibold">Результат</div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Статус <span class="text-danger">*</span></label>
+                        {% for val, label in form.fields.result_status.choices %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="result_status"
+                                   id="result_{{ val }}" value="{{ val }}"
+                                   {% if forloop.first %}checked{% endif %}>
+                            <label class="form-check-label" for="result_{{ val }}">
+                                {% if val == 'delivered' %}
+                                <span class="text-success"><i class="bi bi-check-circle"></i> {{ label }}</span>
+                                {% else %}
+                                <span class="text-danger"><i class="bi bi-x-circle"></i> {{ label }}</span>
+                                {% endif %}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold small">Примечание</label>
+                        <textarea name="notes" rows="2" class="form-control form-control-sm"
+                                  placeholder="Укажите подробности...">{{ form.notes.value|default:'' }}</textarea>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Сохранить
+                        </button>
+                        <a href="{% url 'cases:detail' pk=case.pk %}" class="btn btn-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

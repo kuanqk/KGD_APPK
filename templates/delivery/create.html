@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Направить документ — {{ case.case_number }} — АППК{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'cases:detail' pk=case.pk %}" class="text-decoration-none text-muted small">
+        <i class="bi bi-arrow-left"></i> Дело {{ case.case_number }}
+    </a>
+    <h4 class="mb-0 mt-1"><i class="bi bi-send"></i> Направить документ НП</h4>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header fw-semibold">Параметры отправки</div>
+            <div class="card-body">
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    {# Выбор документа #}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Документ <span class="text-danger">*</span></label>
+                        {% if document %}
+                        <input type="hidden" name="document_id" value="{{ document.pk }}">
+                        <div class="form-control form-control-sm bg-light">
+                            <i class="bi bi-file-earmark-text"></i>
+                            {{ document.doc_number }} — {{ document.get_doc_type_display }}
+                        </div>
+                        {% else %}
+                        <select name="document_id" class="form-select form-select-sm">
+                            <option value="">— выберите документ —</option>
+                            {% for doc in case_documents %}
+                            <option value="{{ doc.pk }}">
+                                {{ doc.doc_number }} — {{ doc.get_doc_type_display }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if not case_documents %}
+                        <div class="text-danger small mt-1">
+                            Нет документов для направления.
+                            <a href="{% url 'documents:create' case_pk=case.pk %}">Создать документ</a>
+                        </div>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+
+                    {# Способ вручения #}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Способ вручения <span class="text-danger">*</span></label>
+                        {% for val, label in form.fields.method.choices %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="method"
+                                   id="method_{{ val }}" value="{{ val }}"
+                                   {% if forloop.first %}checked{% endif %}>
+                            <label class="form-check-label" for="method_{{ val }}">
+                                {% if val == 'in_person' %}<i class="bi bi-person-check"></i>{% else %}<i class="bi bi-envelope"></i>{% endif %}
+                                {{ label }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                        {% for error in form.method.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    {# Трек-номер #}
+                    <div class="mb-3" id="tracking-block">
+                        <label class="form-label fw-semibold small">Трек-номер</label>
+                        <input type="text" name="tracking_number"
+                               value="{{ form.tracking_number.value|default:'' }}"
+                               class="form-control form-control-sm{% if form.tracking_number.errors %} is-invalid{% endif %}"
+                               placeholder="например, RU123456789KZ">
+                        {% for error in form.tracking_number.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Обязателен для заказного письма</div>
+                    </div>
+
+                    {# Примечание #}
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold small">Примечание</label>
+                        <textarea name="notes" rows="2"
+                                  class="form-control form-control-sm">{{ form.notes.value|default:'' }}</textarea>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send"></i> Зафиксировать отправку
+                        </button>
+                        <a href="{% url 'cases:detail' pk=case.pk %}" class="btn btn-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Показываем/скрываем трек-номер в зависимости от метода
+    document.querySelectorAll('input[name="method"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            var trackingBlock = document.getElementById('tracking-block');
+            trackingBlock.style.display = this.value === 'registered_mail' ? 'block' : 'none';
+        });
+    });
+    // Инициализация
+    var checked = document.querySelector('input[name="method"]:checked');
+    if (checked) {
+        document.getElementById('tracking-block').style.display =
+            checked.value === 'registered_mail' ? 'block' : 'none';
+    }
+</script>
+{% endblock %}
