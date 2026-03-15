@@ -33,6 +33,7 @@ LOCAL_APPS = [
     "apps.approvals",
     "apps.notifications",
     "apps.reports",
+    "apps.feedback",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -62,6 +63,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.notifications.context_processors.notifications",
+                "apps.feedback.context_processors.unreviewed_feedback",
             ],
         },
     },
