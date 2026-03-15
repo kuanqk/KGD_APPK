@@ -1,11 +1,13 @@
 import logging
-from datetime import date
+from datetime import date, timedelta
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.db.models import Count, DurationField, ExpressionWrapper, F, Q
+from django.db.models.functions import Now
 from django.utils import timezone
 
 from apps.audit.services import audit_log
-from .models import AdministrativeCase, CaseEvent, CaseEventType, CaseStatus, StagnationSettings, Taxpayer
+from .models import AdministrativeCase, CaseEvent, CaseEventType, CaseStatus, Department, StagnationSettings, Taxpayer
 
 logger = logging.getLogger(__name__)
 
@@ -212,7 +214,7 @@ def after_return_actions(case: AdministrativeCase, doc_type: str, user) -> Admin
     return case
 
 
-FINAL_STATUSES = {CaseStatus.TERMINATED, CaseStatus.COMPLETED, CaseStatus.ARCHIVED}
+FINAL_STATUSES = frozenset({CaseStatus.TERMINATED, CaseStatus.COMPLETED, CaseStatus.ARCHIVED})
 
 
 def get_stagnant_cases():
@@ -220,7 +222,6 @@ def get_stagnant_cases():
     Возвращает QS активных дел, у которых последняя активность
     старше порога (StagnationSettings.stagnation_days).
     """
-    from datetime import timedelta
     settings_obj = StagnationSettings.get()
     threshold_dt = timezone.now() - timedelta(days=settings_obj.stagnation_days)
     return (
@@ -229,3 +230,162 @@ def get_stagnant_cases():
         .filter(last_activity_at__lt=threshold_dt)
         .select_related("responsible_user", "department", "taxpayer")
     )
+
+
+def get_dashboard_data(user) -> dict:
+    """
+    Возвращает данные для дашборда в зависимости от роли пользователя.
+    Вся бизнес-логика изолирована здесь, view остаётся тонким.
+    """
+    settings_obj = StagnationSettings.get()
+    threshold_dt = timezone.now() - timedelta(days=settings_obj.stagnation_days)
+    today = timezone.now().date()
+    tomorrow = today + timedelta(days=1)
+
+    stagnant_annotation = ExpressionWrapper(
+        Now() - F("last_activity_at"),
+        output_field=DurationField(),
+    )
+
+    if user.role in ("admin", "reviewer"):
+        # ── Агрегация по офисам ────────────────────────────────────────────
+        dept_stats = Department.objects.annotate(
+            total=Count("cases"),
+            active=Count(
+                "cases",
+                filter=Q(cases__status__in=[
+                    s for s in CaseStatus.values if s not in FINAL_STATUSES
+                ]),
+            ),
+            stagnant=Count(
+                "cases",
+                filter=Q(
+                    cases__status__in=[
+                        s for s in CaseStatus.values if s not in FINAL_STATUSES
+                    ],
+                    cases__last_activity_at__lt=threshold_dt,
+                ),
+            ),
+            pending_approval=Count(
+                "cases",
+                filter=Q(cases__final_decision__status="pending_approval"),
+            ),
+        ).order_by("code")
+
+        # ── Топ-5 застывших дел ────────────────────────────────────────────
+        top_stagnant = (
+            AdministrativeCase.objects
+            .exclude(status__in=FINAL_STATUSES)
+            .filter(last_activity_at__lt=threshold_dt)
+            .annotate(days_stagnant=stagnant_annotation)
+            .select_related("taxpayer", "responsible_user", "department")
+            .order_by("-days_stagnant")[:5]
+        )
+
+        # ── Счётчики статусов по всей системе ─────────────────────────────
+        all_cases = AdministrativeCase.objects
+        status_counts = {
+            "draft": all_cases.filter(status=CaseStatus.DRAFT).count(),
+            "active": all_cases.exclude(status__in=FINAL_STATUSES).exclude(
+                status=CaseStatus.DRAFT
+            ).count(),
+            "completed": all_cases.filter(
+                status__in=[CaseStatus.TERMINATED, CaseStatus.COMPLETED, CaseStatus.AUDIT_APPROVED]
+            ).count(),
+            "archived": all_cases.filter(status=CaseStatus.ARCHIVED).count(),
+        }
+
+        return {
+            "role_group": "admin_reviewer",
+            "dept_stats": dept_stats,
+            "top_stagnant": top_stagnant,
+            "status_counts": status_counts,
+            "stagnation_threshold": settings_obj.stagnation_days,
+        }
+
+    if user.role in ("operator", "executor"):
+        from apps.hearings.models import Hearing, HearingProtocol, HearingStatus
+
+        # ── Мои активные дела ──────────────────────────────────────────────
+        my_cases = (
+            AdministrativeCase.objects
+            .filter(responsible_user=user)
+            .exclude(status__in=FINAL_STATUSES)
+            .annotate(days_stagnant=stagnant_annotation)
+            .select_related("taxpayer", "department")
+            .order_by("last_activity_at")[:15]
+        )
+
+        # ── Заслушивания сегодня и завтра ──────────────────────────────────
+        upcoming_hearings = (
+            Hearing.objects
+            .filter(
+                case__responsible_user=user,
+                hearing_date__in=[today, tomorrow],
+                status__in=[HearingStatus.SCHEDULED, HearingStatus.IN_PROGRESS],
+            )
+            .select_related("case", "case__taxpayer")
+            .order_by("hearing_date", "hearing_time")
+        )
+
+        # ── Дедлайны протоколов сегодня и завтра ──────────────────────────
+        protocol_deadlines = (
+            HearingProtocol.objects
+            .filter(
+                case__responsible_user=user,
+                deadline_2days__in=[today, tomorrow],
+                case__status=CaseStatus.PROTOCOL_CREATED,
+            )
+            .select_related("case", "case__taxpayer")
+            .order_by("deadline_2days")
+        )
+
+        # ── Дела, ожидающие действий ───────────────────────────────────────
+        ACTION_STATUSES = [
+            CaseStatus.DRAFT,
+            CaseStatus.NOTICE_CREATED,
+            CaseStatus.DELIVERED,
+            CaseStatus.MAIL_RETURNED,
+            CaseStatus.ACT_CREATED,
+            CaseStatus.HEARING_DONE,
+            CaseStatus.PROTOCOL_CREATED,
+        ]
+        awaiting_action = (
+            AdministrativeCase.objects
+            .filter(responsible_user=user, status__in=ACTION_STATUSES)
+            .select_related("taxpayer")
+            .order_by("last_activity_at")[:10]
+        )
+
+        return {
+            "role_group": "operator_executor",
+            "my_cases": my_cases,
+            "upcoming_hearings": upcoming_hearings,
+            "protocol_deadlines": protocol_deadlines,
+            "awaiting_action": awaiting_action,
+            "today": today,
+            "tomorrow": tomorrow,
+            "stagnation_threshold": settings_obj.stagnation_days,
+        }
+
+    # ── observer ───────────────────────────────────────────────────────────────
+    region_qs = AdministrativeCase.objects.filter(region=user.region)
+    from django.db.models import Count as _Count
+    raw_counts = region_qs.values("status").annotate(count=_Count("id"))
+    status_counts = {row["status"]: row["count"] for row in raw_counts}
+
+    total = region_qs.count()
+    active = region_qs.exclude(status__in=FINAL_STATUSES).count()
+    stagnant_count = region_qs.exclude(status__in=FINAL_STATUSES).filter(
+        last_activity_at__lt=threshold_dt
+    ).count()
+
+    return {
+        "role_group": "observer",
+        "region": user.region,
+        "total": total,
+        "active": active,
+        "stagnant_count": stagnant_count,
+        "status_counts": status_counts,
+        "stagnation_threshold": settings_obj.stagnation_days,
+    }

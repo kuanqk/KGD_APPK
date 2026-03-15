@@ -53,11 +53,12 @@ class AppkPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
-    template_name = "accounts/dashboard.html"
+    template_name = "dashboard.html"
 
     def get_context_data(self, **kwargs):
+        from apps.cases.services import get_dashboard_data
         context = super().get_context_data(**kwargs)
-        context["user"] = self.request.user
+        context.update(get_dashboard_data(self.request.user))
         return context
 
 
