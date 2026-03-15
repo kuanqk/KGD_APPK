@@ -2,23 +2,69 @@
 
 Веб-система для управления административными делами в органах КГД РК. Автоматизирует полный цикл: создание уведомлений → вручение документов → возврат по почте → заслушивание → вынесение решения (прекращение или назначение налоговой проверки).
 
+## Функционал
+
+- **Реестр дел** — создание, поиск, фильтрация по статусу / офису / ответственному / периоду
+- **Документооборот** — генерация 8 типов процессуальных документов из шаблонов (PDF)
+- **Вручение** — нарочно и заказным письмом, трекинг, фиксация возврата
+- **Заслушивание** — назначение, протокол, отсчёт 2 рабочих дней (Celery)
+- **Итоговые решения** — прекращение дела или инициирование налоговой проверки
+- **Согласование** — workflow утверждения / возврата на доработку (ApprovalFlow)
+- **Контроль дат (backdating)** — ввод документов задним числом только с разрешения руководителя
+- **Застывшие дела** — автоматический мониторинг дел без движения, ежедневные уведомления
+- **Дашборд по ролям** — разный контент для admin/reviewer (сводка по офисам) и operator/executor (мои дела, дедлайны)
+- **Импорт НП из Excel** — массовая загрузка налогоплательщиков из .xlsx
+- **Уведомления** — внутренние (bell-иконка) и email (Celery Beat)
+- **Отчёты** — 10 типов, экспорт PDF и XLSX
+- **Аудит** — иммутабельный лог всех действий
+
 ## Технологии
 
 - **Backend**: Python 3.11, Django 4.2
 - **База данных**: PostgreSQL 15
 - **Очереди задач**: Celery + Redis
 - **Веб-сервер**: Gunicorn + Nginx
-- **Экспорт**: WeasyPrint (PDF), openpyxl (XLSX)
+- **PDF**: xhtml2pdf (без системных зависимостей, поддержка кириллицы через DejaVu)
+- **Excel**: openpyxl (экспорт отчётов + импорт НП)
 - **Контейнеризация**: Docker Compose
 
 ## Роли пользователей
 
-| Роль | Доступ |
-|------|--------|
-| `admin` | Полный доступ: дела, документы, пользователи, лог системы, согласование |
-| `operator` | Дела, документы, вручение, заслушивания |
-| `reviewer` | Согласование решений, заслушивания, отчёты |
-| `observer` | Только заслушивания и отчёты (без доступа к делам) |
+| Роль | Видит дела | Создаёт дела | Согласует | Импорт НП | Дашборд |
+|------|-----------|--------------|-----------|-----------|---------|
+| `admin` | Все офисы | Да | Да | Да | Сводка по офисам |
+| `reviewer` | Все офисы | Нет | Да | Нет | Сводка по офисам |
+| `operator` | Свой офис | Да | Нет | Да | Мои дела + дедлайны |
+| `executor` | Свои дела | Нет | Нет | Нет | Мои дела + дедлайны |
+| `observer` | Свой офис (просмотр) | Нет | Нет | Нет | Счётчики региона |
+
+### Логика for_user() (изоляция данных)
+
+```python
+def for_user(self, user):
+    if user.role in ("admin", "reviewer"):
+        return self                          # всё
+    if user.role == "executor":
+        return self.filter(responsible_user=user)
+    # operator, observer — по офису; fallback на регион
+    if user.department_id:
+        return self.filter(department=user.department)
+    if user.region:
+        return self.filter(region=user.region)
+    return self.none()
+```
+
+## Формат номеров документов
+
+Новый формат (для дел с заполненным офисом):
+```
+PREFIX-КОД-YYYYMMDD-NNNNNNN
+Пример: ИЗВ-05-20260316-0000042
+```
+
+Префиксы: `ИЗВ` · `ПРД` · `АКТ` · `ДЭР` · `ПРТ` · `ПРК` · `ВНП`
+
+Старый формат `PREFIX-ГГГГ-NNNNN` сохраняется для дел без офиса (обратная совместимость).
 
 ## Быстрый старт
 
@@ -46,8 +92,24 @@ docker compose exec web python manage.py migrate
 docker compose exec web python manage.py createsuperuser
 
 # 5. Открыть браузер
-# http://localhost/         — основное приложение
+# http://localhost/         — основное приложение (дашборд)
 # http://localhost/admin/   — Django Admin
+```
+
+### Первый запуск — обязательные шаги после migrate
+
+```bash
+# Шаг 1: Создать офисы (подразделения)
+# Открыть: http://localhost/admin/cases/department/
+# Добавить офисы с кодами 01–20 и наименованиями
+
+# Шаг 2: Назначить офисы пользователям
+# Открыть: http://localhost/users/ → Редактировать каждого пользователя
+# Поле "Подразделение" — выбрать соответствующий офис
+
+# Шаг 3: Настроить порог застывших дел
+# Открыть: http://localhost/admin/cases/stagnationsettings/
+# Установить stagnation_days (по умолчанию 30) и notify_reviewer
 ```
 
 ### Переменные окружения (`.env`)
@@ -71,6 +133,8 @@ EMAIL_PORT=587
 EMAIL_HOST_USER=noreply@appk.kz
 EMAIL_HOST_PASSWORD=your-email-password
 DEFAULT_FROM_EMAIL=noreply@appk.kz
+
+SITE_URL=http://localhost:8000
 ```
 
 ## Структура проекта
@@ -79,8 +143,8 @@ DEFAULT_FROM_EMAIL=noreply@appk.kz
 KGD_APPK/
 ├── apps/
 │   ├── accounts/       # Пользователи, аутентификация, управление
-│   ├── cases/          # Административные дела
-│   ├── documents/      # Документы по делам
+│   ├── cases/          # Административные дела, Department, StagnationSettings
+│   ├── documents/      # Документы по делам, генерация PDF
 │   ├── delivery/       # Вручение уведомлений
 │   ├── hearings/       # Заслушивания
 │   ├── decisions/      # Итоговые решения
@@ -96,6 +160,7 @@ KGD_APPK/
 │   ├── urls.py
 │   └── celery.py
 ├── templates/          # HTML-шаблоны (Django template language)
+├── docs/               # Документация проекта
 ├── docker/
 │   ├── web/Dockerfile
 │   ├── nginx/default.conf
@@ -122,34 +187,46 @@ docker compose exec web python manage.py shell_plus
 # Создать миграции
 docker compose exec web python manage.py makemigrations
 
+# Проверить миграции перед коммитом
+docker compose exec web python manage.py makemigrations --check
+
 # Запустить тесты
 docker compose exec web python manage.py test
 
 # Проверить Celery задачи вручную
 docker compose exec web celery -A config call notifications.tasks.check_deadlines
+docker compose exec web celery -A config call notifications.tasks.check_stagnant_cases
 ```
 
 ### Настройки модулей
 
 | Приложение | Назначение | Ключевые файлы |
 |------------|-----------|----------------|
-| `accounts` | Кастомный User с ролями | `models.py`, `services.py` |
-| `cases` | Жизненный цикл дела (статусы) | `models.py`, `services.py` |
+| `accounts` | Кастомный User с ролями и офисом | `models.py`, `forms.py` |
+| `cases` | Жизненный цикл дела, Department, StagnationSettings | `models.py`, `services.py` |
 | `delivery` | Вручение и возврат документов | `models.py`, `services.py` |
 | `hearings` | Заслушивания, календарь | `models.py`, `services.py` |
 | `decisions` | Прекращение / налоговая проверка | `models.py`, `services.py` |
 | `approvals` | Workflow согласования | `models.py`, `services.py` |
 | `notifications` | Уведомления + email + Celery Beat | `services.py`, `tasks.py` |
-| `reports` | 9 типов отчётов, PDF/XLSX | `services.py`, `exporters.py` |
+| `reports` | 10 типов отчётов, PDF/XLSX | `services.py`, `exporters.py` |
 | `audit` | Иммутабельный лог действий | `models.py`, `middleware.py` |
+
+## Celery Beat расписание
+
+| Задача | Расписание | Описание |
+|--------|-----------|----------|
+| `check_deadlines` | Каждый час | Уведомления об истекающих и просроченных протоколах |
+| `send_pending_emails` | Каждые 30 минут | Email-рассылка непрочитанных уведомлений |
+| `check_stagnant_cases` | Ежедневно в 09:00 | Уведомление reviewer-ов о делах без движения |
 
 ## Резервное копирование
 
-Сервис `backup` в `docker-compose.yml` автоматически делает резервную копию PostgreSQL каждый день в 02:00 (по времени контейнера) и хранит последние 7 дней в томе `backup_data`.
+Сервис `backup` в `docker-compose.yml` автоматически делает резервную копию PostgreSQL каждый день в 02:00 и хранит последние 7 дней в томе `backup_data`.
 
 ```bash
 # Ручной запуск резервного копирования
-docker compose exec backup /backup.sh
+docker compose exec backup /bin/sh /backup.sh
 
 # Просмотр существующих резервных копий
 docker compose exec backup ls -lh /backups/
@@ -164,18 +241,18 @@ cp .env.example .env
 # ALLOWED_HOSTS — реальное доменное имя
 # POSTGRES_PASSWORD — надёжный пароль
 # EMAIL_* — SMTP настройки
+# DJANGO_SETTINGS_MODULE=config.settings.prod
 
-# 2. Изменить DJANGO_SETTINGS_MODULE
-# В .env: DJANGO_SETTINGS_MODULE=config.settings.prod
-
-# 3. Запустить
+# 2. Запустить
 docker compose up -d
 
-# 4. Применить миграции
+# 3. Применить миграции
 docker compose exec web python manage.py migrate
 
-# 5. Создать суперпользователя
+# 4. Создать суперпользователя
 docker compose exec web python manage.py createsuperuser
+
+# 5. Создать офисы и настроить пользователей (см. "Первый запуск")
 ```
 
 Продакшн-настройки (`config/settings/prod.py`) включают:
@@ -184,13 +261,6 @@ docker compose exec web python manage.py createsuperuser
 - `SESSION_COOKIE_SECURE = True`
 - `CSRF_COOKIE_SECURE = True`
 - `X_FRAME_OPTIONS = "DENY"`
-
-## Celery Beat расписание
-
-| Задача | Расписание | Описание |
-|--------|-----------|----------|
-| `check_deadlines` | Каждый час | Уведомления об истекающих и просроченных делах |
-| `send_pending_emails` | Каждые 30 минут | Email-рассылка непрочитанных уведомлений |
 
 ## Лицензия
 

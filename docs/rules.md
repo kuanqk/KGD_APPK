@@ -149,16 +149,24 @@ audit_log(
 # QuerySet всегда фильтруем по пользователю
 class CaseQuerySet(models.QuerySet):
     def for_user(self, user):
-        if user.role == "observer":
-            return self.filter(region=user.region)
+        if user.role in ("admin", "reviewer"):
+            return self                          # все дела
         if user.role == "executor":
             return self.filter(responsible_user=user)
-        return self  # admin, operator, reviewer — всё
+        # operator, observer — по офису; fallback на регион
+        if user.department_id:
+            return self.filter(department=user.department)
+        if user.region:
+            return self.filter(region=user.region)
+        return self.none()
 
 # Во view:
 def get_queryset(self):
     return AdministrativeCase.objects.for_user(self.request.user)
 ```
+
+> **Важно:** `operator` и `observer` теперь фильтруются по `department` (FK), а не по `region` (CharField).
+> Это изменение введено в Sprint SC.
 
 ---
 
@@ -245,8 +253,14 @@ python manage.py shell_plus  # django-extensions
 | `[S7]` | Sprint 7 (Согласование) |
 | `[S8]` | Sprint 8 (Уведомления) |
 | `[S9]` | Sprint 9 (Отчёты) |
+| `[S10]` | Sprint 10 (Безопасность) |
+| `[P1]` | Sprint P1 (Backdating — контроль дат) |
+| `[P2]` | Sprint P2 (Новый формат номеров документов) |
+| `[SA]` | Sprint SA (Просрочки + застывшие дела) |
+| `[SB]` | Sprint SB (Умный дашборд по ролям) |
+| `[SC]` | Sprint SC (Фильтр по офису + for_user() + импорт НП) |
 | `[BUG]` | Баг-репорт |
 | `[REF]` | Рефакторинг |
 | `[DB]` | Изменение модели/миграция |
 
-**Пример:** `[S3][DB] Добавь поле tracking_number в DeliveryRecord, тип CharField(100), nullable`
+**Пример:** `[SC][BUG] Фильтр по офису не применяется при пагинации. Файл: apps/cases/views.py`

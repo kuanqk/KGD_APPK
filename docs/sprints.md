@@ -226,6 +226,107 @@ Sprint 7  │ Согласование + Возврат на доработку
 Sprint 8  │ Уведомления + Celery
 Sprint 9  │ Отчёты + Экспорт
 Sprint 10 │ Безопасность + Шлифовка + Приёмка
+──────────────────────────────────────────────
+Sprint P1 │ Backdating — контроль дат задним числом
+Sprint P2 │ Новый формат номеров документов
+Sprint SA │ Просрочки + застывшие дела
+Sprint SB │ Умный дашборд по ролям
+Sprint SC │ Фильтр по офису + fix for_user() + импорт НП
 ```
 
 **Итого:** ~12–16 недель при команде 2–3 разработчика.
+
+---
+
+## Доработки после Sprint 10
+
+### Sprint P1 — Backdating: контроль ввода задним числом
+
+**Цель:** Документы с датой ранее даты дела помечаются; ввод разрешается только руководителем.
+
+### Задачи
+
+- [x] Поля на `AdministrativeCase`: `allow_backdating`, `backdating_allowed_by`, `backdating_allowed_at`, `backdating_comment`
+- [x] Миграция `0002_administrativecase_backdating`
+- [x] Endpoint `cases:allow_backdating` (POST) — устанавливает флаг, требует `role in (admin, reviewer)`
+- [x] Модальное окно «Разрешить ввод задним числом» в карточке дела
+- [x] Бейдж «Внесено задним числом» в `documents/detail.html` (сравнение `doc.created_at.date` с `case.created_at.date`)
+
+**Критерий готовности:** Бейдж отображается; модал доступен только admin/reviewer; флаг сохраняется в БД.
+
+---
+
+### Sprint P2 — Новый формат номеров документов
+
+**Цель:** Номера документов содержат код офиса и дату: `PREFIX-КОД-YYYYMMDD-NNNNNNN`.
+
+### Задачи
+
+- [x] Модель `Department` с полями `name`, `code`, `doc_sequence`, `seq_year`
+- [x] Миграции: `0003_department`, `0004_administrativecase_department_fk`, `0002_user_department`
+- [x] `generate_doc_number(doc_type, case)` — атомарный инкремент через `select_for_update()`; сброс при смене года
+- [x] Fallback на старый формат `PREFIX-ГГГГ-NNNNN` для дел без офиса
+- [x] Префикс `ПР` переименован в `ПРД` (предварительное решение)
+- [x] `AdministrativeCase.department` → FK на `Department` (было CharField)
+- [x] `User.department` → FK на `Department`
+- [x] `Department` зарегистрирован в Django Admin
+
+**Критерий готовности:** Документ по делу с офисом 05 получает номер вида `ИЗВ-05-20260316-0000001`.
+
+---
+
+### Sprint SA — Просрочки и застывшие дела
+
+**Цель:** Система автоматически отслеживает дела без движения и уведомляет руководителей.
+
+### Задачи
+
+- [x] `StagnationSettings` синглтон: `stagnation_days`, `notify_reviewer`
+- [x] `AdministrativeCase.last_activity_at` — обновляется при каждом `change_case_status()`
+- [x] `FINAL_STATUSES = frozenset({TERMINATED, COMPLETED, ARCHIVED})`
+- [x] `get_stagnant_cases()` в `services.py` — исключает финальные статусы, фильтрует по `last_activity_at`
+- [x] Celery-задача `check_stagnant_cases` — ежедневно в 09:00; дедупликация по дате
+- [x] `NotificationType.STAGNANT = "stagnant"` добавлен
+- [x] Колонка «Активность» в реестре дел с цветными бейджами (жёлтый 80%, красный 100% порога)
+- [x] `StagnationSettings` зарегистрирован в Django Admin (singleton guard)
+- [x] Миграция `0005_stagnationsettings_last_activity_at`
+
+**Критерий готовности:** Дело без движения N дней → уведомление reviewer-у; бейдж в реестре.
+
+---
+
+### Sprint SB — Умный дашборд по ролям
+
+**Цель:** Главная страница показывает разный контент в зависимости от роли пользователя.
+
+### Задачи
+
+- [x] `get_dashboard_data(user)` в `cases/services.py`:
+  - `admin/reviewer` → статистика по офисам (`dept_stats`), топ-5 застывших, счётчики статусов
+  - `operator/executor` → мои дела, приближающиеся заслушивания, просроченные протоколы
+  - `observer` → счётчики своего региона
+- [x] `templates/dashboard.html` — три блока по роли
+- [x] `DashboardView` вызывает `get_dashboard_data()`
+
+**Критерий готовности:** Admin видит сводку по офисам; operator видит свои дедлайны.
+
+---
+
+### Sprint SC — Фильтр по офису + fix for_user() + импорт НП
+
+**Цель:** Реестр фильтруется по офису; изоляция данных использует department; массовая загрузка НП из Excel.
+
+### Задачи
+
+- [x] `CaseFilterForm`: поле `department = ModelChoiceField(Department)` (видно только admin/reviewer)
+- [x] `CaseListView`: фильтр по офису в `get_queryset()`; контекст `show_dept_filter`
+- [x] `for_user()` fix: `operator/observer` фильтруют по `department` (было `region`)
+- [x] Шаблон реестра: select «Офис», colspan 7→8
+- [x] `TaxpayerImportView` (POST .xlsx): openpyxl, `get_or_create` + update полей, аудит
+- [x] `taxpayer_import_template` view: генерирует xlsx-шаблон динамически (не бинарник в git)
+- [x] `openpyxl==3.1.2` добавлен в `requirements/base.txt`
+- [x] `templates/cases/taxpayer_import.html`: форма, правила, счётчики результата
+- [x] Ссылка «Импорт НП» в `base.html` для admin/operator
+- [x] Столбец «Подразделение» и поле department в `/users/`
+
+**Критерий готовности:** Admin загружает .xlsx с НП → все строки импортированы; реестр фильтруется по офису.
