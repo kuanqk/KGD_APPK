@@ -35,8 +35,8 @@ services:
              gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --reload"
     volumes:
       - .:/app
-      - static_volume:/app/staticfiles
-      - media_volume:/app/media
+      - ./staticfiles:/app/staticfiles
+      - ./media:/app/media
     env_file:
       - .env
     environment:
@@ -86,6 +86,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  static_volume:
-  media_volume:
   backup_data:
