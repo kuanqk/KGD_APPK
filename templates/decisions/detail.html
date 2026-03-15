@@ -126,11 +126,11 @@
     </div>
 </div>
 
-{% if decision.file_path %}
+{% if decision_doc %}
 <div class="card mb-3">
     <div class="card-header fw-semibold"><i class="bi bi-file-earmark-pdf"></i> Документ решения</div>
     <div class="card-body">
-        <a href="{{ decision.file_path }}" class="btn btn-outline-secondary" target="_blank">
+        <a href="{% url 'documents:download' pk=decision_doc.pk %}" class="btn btn-outline-secondary">
             <i class="bi bi-download"></i> Скачать PDF
         </a>
     </div>

@@ -168,6 +168,21 @@ class DecisionDetailView(LoginRequiredMixin, DetailView):
             .order_by("-version")
             .first()
         )
+        # Документ решения для кнопки скачивания
+        from apps.documents.models import CaseDocument, DocumentType
+        from apps.decisions.models import DecisionType
+        doc_type_map = {
+            DecisionType.TERMINATION: DocumentType.TERMINATION_DECISION,
+            DecisionType.TAX_AUDIT: DocumentType.AUDIT_INITIATION,
+        }
+        doc_type = doc_type_map.get(self.object.decision_type)
+        context["decision_doc"] = (
+            CaseDocument.objects
+            .filter(case=self.object.case, doc_type=doc_type)
+            .order_by("-created_at")
+            .first()
+            if doc_type else None
+        )
         return context
 
     def post(self, request, *args, **kwargs):
