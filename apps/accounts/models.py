@@ -1,6 +1,7 @@
 import logging
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from apps.cases.models import Department
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,14 @@ class User(AbstractUser):
         max_length=200,
         blank=True,
         verbose_name="Должность",
+    )
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="users",
+        verbose_name="Подразделение",
     )
 
     class Meta:

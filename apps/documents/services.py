@@ -12,37 +12,64 @@ from .models import CaseDocument, DocumentStatus, DocumentTemplate, DocumentType
 
 logger = logging.getLogger(__name__)
 
+DOC_TYPE_PREFIX = {
+    DocumentType.NOTICE: "ИЗВ",
+    DocumentType.PRELIMINARY_DECISION: "ПРД",
+    DocumentType.INSPECTION_ACT: "АКТ",
+    DocumentType.DER_REQUEST: "ДЭР",
+    DocumentType.HEARING_PROTOCOL: "ПРТ",
+    DocumentType.TERMINATION_DECISION: "ПРК",
+    DocumentType.AUDIT_INITIATION: "ВНП",
+    DocumentType.AUDIT_ORDER: "ПРК",
+}
 
-def generate_doc_number(doc_type: str) -> str:
-    """Генерирует номер документа формата <PREFIX>-ГГГГ-NNNNN."""
-    prefixes = {
-        DocumentType.NOTICE: "ИЗВ",
-        DocumentType.PRELIMINARY_DECISION: "ПР",
-        DocumentType.INSPECTION_ACT: "АКТ",
-        DocumentType.DER_REQUEST: "ДЭР",
-        DocumentType.HEARING_PROTOCOL: "ПРТ",
-        DocumentType.TERMINATION_DECISION: "ПРК",
-        DocumentType.AUDIT_INITIATION: "ВНП",
-        DocumentType.AUDIT_ORDER: "ПРК",
-    }
-    prefix = prefixes.get(doc_type, "ДОК")
-    year = date.today().year
-    full_prefix = f"{prefix}-{year}-"
 
-    last = (
-        CaseDocument.objects
-        .filter(doc_number__startswith=full_prefix)
-        .order_by("-doc_number")
-        .values_list("doc_number", flat=True)
-        .first()
-    )
-    seq = 1
-    if last:
-        try:
-            seq = int(last.split("-")[-1]) + 1
-        except (ValueError, IndexError):
-            seq = 1
-    return f"{full_prefix}{seq:05d}"
+def generate_doc_number(doc_type: str, case=None) -> str:
+    """
+    Генерирует номер документа формата <PREFIX>-<КОД>-<YYYYMMDD>-<NNNNNNN>.
+    Если у дела нет подразделения — fallback на старый формат <PREFIX>-ГГГГ-NNNNN.
+    """
+    from django.db import transaction as db_transaction
+    from apps.cases.models import Department
+
+    prefix = DOC_TYPE_PREFIX.get(doc_type, "ДОК")
+    today = date.today()
+    year = today.year
+
+    dept = getattr(case, "department", None) if case is not None else None
+
+    if dept is None:
+        # Fallback: старый формат для дел без подразделения
+        full_prefix = f"{prefix}-{year}-"
+        last = (
+            CaseDocument.objects
+            .filter(doc_number__startswith=full_prefix)
+            .order_by("-doc_number")
+            .values_list("doc_number", flat=True)
+            .first()
+        )
+        seq = 1
+        if last:
+            try:
+                seq = int(last.split("-")[-1]) + 1
+            except (ValueError, IndexError):
+                seq = 1
+        return f"{full_prefix}{seq:05d}"
+
+    dept_code = str(dept.code).zfill(2)
+    date_str = today.strftime("%Y%m%d")
+
+    with db_transaction.atomic():
+        dept_obj = Department.objects.select_for_update().get(pk=dept.pk)
+        if dept_obj.seq_year != year:
+            dept_obj.seq_year = year
+            dept_obj.doc_sequence = 1
+        else:
+            dept_obj.doc_sequence += 1
+        dept_obj.save(update_fields=["doc_sequence", "seq_year"])
+        seq = dept_obj.doc_sequence
+
+    return f"{prefix}-{dept_code}-{date_str}-{seq:07d}"
 
 
 def get_document_context(case) -> dict:
@@ -140,7 +167,7 @@ def generate_document(case, doc_type: str, user) -> CaseDocument:
 
     pdf_bytes = _render_pdf(html_content)
 
-    doc_number = generate_doc_number(doc_type)
+    doc_number = generate_doc_number(doc_type, case)
     file_path = _save_pdf_file(doc_number, pdf_bytes)
 
     # Определяем версию (если уже есть документы того же типа по делу)

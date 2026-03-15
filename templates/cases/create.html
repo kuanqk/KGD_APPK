@@ -76,9 +76,22 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-semibold small">Подразделение</label>
-                        <input type="text" name="department" value="{{ form.department.value|default:'' }}"
-                               class="form-control form-control-sm">
+                        <label class="form-label fw-semibold small">{{ form.department.label }} <span class="text-danger">*</span></label>
+                        <select name="{{ form.department.html_name }}"
+                                class="form-select form-select-sm{% if form.department.errors %} is-invalid{% endif %}"
+                                {% if request.user.role != 'admin' and request.user.department_id %}disabled{% endif %}>
+                            <option value="">— выберите подразделение —</option>
+                            {% for dept in form.fields.department.queryset %}
+                            <option value="{{ dept.pk }}"
+                                {% if form.department.value == dept.pk|stringformat:'s' or form.department.value == dept.pk %}selected{% endif %}>
+                                {{ dept.code }} — {{ dept.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if request.user.role != 'admin' and request.user.department_id %}
+                        <input type="hidden" name="{{ form.department.html_name }}" value="{{ request.user.department_id }}">
+                        {% endif %}
+                        {% for error in form.department.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                     </div>
 
                     <div class="mb-3">

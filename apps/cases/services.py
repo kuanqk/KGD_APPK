@@ -58,7 +58,7 @@ def create_case(
         case_number=generate_case_number(),
         taxpayer=taxpayer,
         region=region,
-        department=department,
+        department=department,  # FK: Department instance or None
         basis=basis,
         category=category,
         description=description,

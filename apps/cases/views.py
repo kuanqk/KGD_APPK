@@ -100,6 +100,13 @@ class CaseCreateView(LoginRequiredMixin, FormView):
             return redirect("cases:list")
         return super().dispatch(request, *args, **kwargs)
 
+    def get_initial(self):
+        initial = super().get_initial()
+        user = self.request.user
+        if user.department_id and user.role not in ("admin", "observer"):
+            initial["department"] = user.department_id
+        return initial
+
     def form_valid(self, form):
         data = form.cleaned_data
         case = create_case(
@@ -114,7 +121,7 @@ class CaseCreateView(LoginRequiredMixin, FormView):
             },
             region=data["region"],
             basis=data["basis"],
-            department=data.get("department", ""),
+            department=data.get("department"),
             category=data.get("category", ""),
             description=data.get("description", ""),
             responsible_user=data.get("responsible_user"),

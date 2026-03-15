@@ -1,6 +1,6 @@
 from django import forms
 from apps.accounts.models import User
-from .models import AdministrativeCase, Taxpayer, CaseBasis, TaxpayerType
+from .models import AdministrativeCase, Department, Taxpayer, CaseBasis, TaxpayerType
 
 
 class TaxpayerForm(forms.ModelForm):
@@ -37,7 +37,11 @@ class CaseCreateForm(forms.Form):
 
     # Данные дела
     region = forms.CharField(max_length=100, label="Регион")
-    department = forms.CharField(max_length=200, required=False, label="Подразделение")
+    department = forms.ModelChoiceField(
+        queryset=Department.objects.all(),
+        label="Подразделение",
+        empty_label="— выберите подразделение —",
+    )
     basis = forms.ChoiceField(choices=CaseBasis.choices, label="Основание")
     category = forms.CharField(max_length=200, required=False, label="Категория")
     description = forms.CharField(

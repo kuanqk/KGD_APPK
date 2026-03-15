@@ -5,6 +5,25 @@ from django.db import models
 logger = logging.getLogger(__name__)
 
 
+class Department(models.Model):
+    name = models.CharField(max_length=200, verbose_name="Наименование")
+    code = models.CharField(
+        max_length=2,
+        unique=True,
+        verbose_name="Код офиса (01-20)",
+    )
+    doc_sequence = models.PositiveIntegerField(default=0, verbose_name="Счётчик документов")
+    seq_year = models.IntegerField(default=0, verbose_name="Год счётчика")
+
+    class Meta:
+        verbose_name = "Подразделение"
+        verbose_name_plural = "Подразделения"
+        ordering = ["code"]
+
+    def __str__(self):
+        return f"{self.code} — {self.name}"
+
+
 class TaxpayerType(models.TextChoices):
     INDIVIDUAL = "individual", "Физическое лицо"
     LEGAL = "legal", "Юридическое лицо"
@@ -112,7 +131,14 @@ class AdministrativeCase(models.Model):
         verbose_name="Налогоплательщик",
     )
     region = models.CharField(max_length=100, verbose_name="Регион", db_index=True)
-    department = models.CharField(max_length=200, blank=True, verbose_name="Подразделение")
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cases",
+        verbose_name="Подразделение",
+    )
     responsible_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
