@@ -5,7 +5,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.audit.services import audit_log
-from .models import AdministrativeCase, CaseEvent, CaseEventType, CaseStatus, Taxpayer
+from .models import AdministrativeCase, CaseEvent, CaseEventType, CaseStatus, StagnationSettings, Taxpayer
 
 logger = logging.getLogger(__name__)
 
@@ -108,11 +108,12 @@ def change_case_status(case: AdministrativeCase, new_status: str, user, comment:
     old_status = case.status
     case.status = new_status
 
+    case.last_activity_at = timezone.now()
+    update_fields = ["status", "last_activity_at", "updated_at"]
     if new_status in (CaseStatus.TERMINATED, CaseStatus.COMPLETED, CaseStatus.ARCHIVED):
-        from django.utils import timezone
         case.closed_at = timezone.now()
-
-    case.save(update_fields=["status", "closed_at", "updated_at"] if case.closed_at else ["status", "updated_at"])
+        update_fields.append("closed_at")
+    case.save(update_fields=update_fields)
 
     description = f"Статус изменён: «{CaseStatus(old_status).label}» → «{CaseStatus(new_status).label}»"
     if comment:
@@ -209,3 +210,22 @@ def after_return_actions(case: AdministrativeCase, doc_type: str, user) -> Admin
         details={"doc_type": doc_type, "new_status": case.status},
     )
     return case
+
+
+FINAL_STATUSES = {CaseStatus.TERMINATED, CaseStatus.COMPLETED, CaseStatus.ARCHIVED}
+
+
+def get_stagnant_cases():
+    """
+    Возвращает QS активных дел, у которых последняя активность
+    старше порога (StagnationSettings.stagnation_days).
+    """
+    from datetime import timedelta
+    settings_obj = StagnationSettings.get()
+    threshold_dt = timezone.now() - timedelta(days=settings_obj.stagnation_days)
+    return (
+        AdministrativeCase.objects
+        .exclude(status__in=FINAL_STATUSES)
+        .filter(last_activity_at__lt=threshold_dt)
+        .select_related("responsible_user", "department", "taxpayer")
+    )

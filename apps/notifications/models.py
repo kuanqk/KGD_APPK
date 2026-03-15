@@ -12,6 +12,7 @@ class NotificationType(models.TextChoices):
     RETURNED = "returned", "Возвращено на доработку"
     APPROVAL_NEEDED = "approval_needed", "Требует согласования"
     STAGE_COMPLETED = "stage_completed", "Этап завершён"
+    STAGNANT = "stagnant", "Без движения"
 
 
 class NotificationQuerySet(models.QuerySet):

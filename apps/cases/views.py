@@ -2,14 +2,15 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q
+from django.db.models import DurationField, ExpressionWrapper, F, Q
+from django.db.models.functions import Now
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import ListView, DetailView, FormView
 
 from .forms import CaseCreateForm, CaseFilterForm
-from .models import AdministrativeCase
+from .models import AdministrativeCase, StagnationSettings
 from .services import create_case, allow_backdating
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,12 @@ class CaseListView(LoginRequiredMixin, ListView):
             AdministrativeCase.objects
             .for_user(self.request.user)
             .select_related("taxpayer", "responsible_user", "created_by")
+            .annotate(
+                days_stagnant=ExpressionWrapper(
+                    Now() - F("last_activity_at"),
+                    output_field=DurationField(),
+                )
+            )
         )
         form = CaseFilterForm(self.request.GET)
         if not form.is_valid():
@@ -53,6 +60,9 @@ class CaseListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["filter_form"] = CaseFilterForm(self.request.GET)
+        threshold = StagnationSettings.get().stagnation_days
+        context["stagnation_threshold"] = threshold
+        context["stagnation_warn_threshold"] = int(threshold * 0.8)
         return context
 
 

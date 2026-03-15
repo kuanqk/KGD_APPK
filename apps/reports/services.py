@@ -6,10 +6,11 @@
 import logging
 from datetime import timedelta
 
-from django.db.models import Avg, Count, F, ExpressionWrapper, DurationField, Q
+from django.db.models import Avg, Count, DurationField, ExpressionWrapper, F, Q
+from django.db.models.functions import Now
 from django.utils import timezone
 
-from apps.cases.models import AdministrativeCase, CaseStatus
+from apps.cases.models import AdministrativeCase, CaseStatus, StagnationSettings
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ def apply_filters(qs, filters: dict, user):
     if filters.get("region"):
         qs = qs.filter(region__icontains=filters["region"])
     if filters.get("department"):
-        qs = qs.filter(department__icontains=filters["department"])
+        qs = qs.filter(department__name__icontains=filters["department"])
     if filters.get("status"):
         qs = qs.filter(status=filters["status"])
     if filters.get("responsible_user"):
@@ -202,6 +203,30 @@ def discipline_report(filters: dict, user) -> list:
 
     result.sort(key=lambda r: -r["overdue"])
     return result
+
+
+def stagnant_cases(filters: dict, user):
+    """
+    Застывшие дела — активные дела без движения дольше порога.
+    Аннотированы полем days_stagnant (timedelta).
+    """
+    from apps.cases.services import FINAL_STATUSES
+    settings_obj = StagnationSettings.get()
+    threshold_dt = timezone.now() - timedelta(days=settings_obj.stagnation_days)
+
+    qs = apply_filters(AdministrativeCase.objects, filters, user)
+    return (
+        qs.exclude(status__in=FINAL_STATUSES)
+        .filter(last_activity_at__lt=threshold_dt)
+        .annotate(
+            days_stagnant=ExpressionWrapper(
+                Now() - F("last_activity_at"),
+                output_field=DurationField(),
+            )
+        )
+        .select_related("taxpayer", "responsible_user", "department")
+        .order_by("last_activity_at")
+    )
 
 
 def cases_registry(filters: dict, user):

@@ -189,6 +189,12 @@ class AdministrativeCase(models.Model):
         verbose_name="Комментарий к вводу задним числом",
     )
 
+    last_activity_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Последняя активность",
+        db_index=True,
+    )
+
     objects = CaseQuerySet.as_manager()
 
     class Meta:
@@ -234,3 +240,27 @@ class CaseEvent(models.Model):
 
     def __str__(self):
         return f"{self.case.case_number} | {self.get_event_type_display()} | {self.created_at:%d.%m.%Y %H:%M}"
+
+
+class StagnationSettings(models.Model):
+    """Singleton-настройки порога застывших дел (всегда pk=1)."""
+    stagnation_days = models.PositiveIntegerField(
+        default=30,
+        verbose_name="Порог застывания (дней)",
+    )
+    notify_reviewer = models.BooleanField(
+        default=True,
+        verbose_name="Уведомлять руководителя",
+    )
+
+    class Meta:
+        verbose_name = "Настройки контроля застывших дел"
+        verbose_name_plural = "Настройки контроля застывших дел"
+
+    def __str__(self):
+        return f"StagnationSettings(threshold={self.stagnation_days}d)"
+
+    @classmethod
+    def get(cls) -> "StagnationSettings":
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

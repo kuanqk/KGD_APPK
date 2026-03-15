@@ -126,6 +126,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.notifications.tasks.send_pending_emails",
         "schedule": crontab(minute="*/30"),
     },
+    "check-stagnant-cases": {
+        "task": "apps.notifications.tasks.check_stagnant_cases",
+        "schedule": crontab(hour=9, minute=0),
+    },
 }
 
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@appk.kz")

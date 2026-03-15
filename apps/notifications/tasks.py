@@ -118,6 +118,94 @@ def check_deadlines(self):
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def check_stagnant_cases(self):
+    """
+    Запускается ежедневно в 9:00 через Celery Beat.
+    Находит дела без движения дольше порога и уведомляет руководителей офиса.
+    Не дублирует: пропускает дела, по которым уведомление уже отправлено сегодня.
+    """
+    from apps.cases.services import get_stagnant_cases, StagnationSettings, FINAL_STATUSES
+    from apps.cases.models import StagnationSettings as SS
+    from apps.audit.services import audit_log
+    from apps.notifications.models import Notification, NotificationType
+    from apps.notifications.services import notify
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+
+    try:
+        settings_obj = SS.get()
+        if not settings_obj.notify_reviewer:
+            logger.info("check_stagnant_cases: notify_reviewer=False, skipping")
+            return {"skipped": True}
+
+        today = timezone.now().date()
+        stagnant_qs = get_stagnant_cases()
+        notified_count = 0
+        skipped_count = 0
+
+        for case in stagnant_qs:
+            # Определяем получателей — reviewer того же подразделения (или все reviewer)
+            reviewer_qs = User.objects.filter(role="reviewer", is_active=True)
+            if case.department_id:
+                dept_reviewers = reviewer_qs.filter(department_id=case.department_id)
+                if dept_reviewers.exists():
+                    reviewer_qs = dept_reviewers
+
+            days_stagnant = (timezone.now() - case.last_activity_at).days
+
+            for reviewer in reviewer_qs:
+                # Защита от дублирования: уведомление за сегодня уже отправлено?
+                already_sent = Notification.objects.filter(
+                    user=reviewer,
+                    case=case,
+                    notification_type=NotificationType.STAGNANT,
+                    created_at__date=today,
+                ).exists()
+
+                if already_sent:
+                    skipped_count += 1
+                    continue
+
+                from django.urls import reverse
+                url = reverse("cases:detail", kwargs={"pk": case.pk})
+                notify(
+                    user=reviewer,
+                    notification_type=NotificationType.STAGNANT,
+                    message=(
+                        f"Дело {case.case_number} ({case.taxpayer.name}) "
+                        f"без движения {days_stagnant} дн. "
+                        f"Последняя активность: {case.last_activity_at:%d.%m.%Y}."
+                    ),
+                    case=case,
+                    url=url,
+                )
+                notified_count += 1
+
+            audit_log(
+                user=None,
+                action="stagnant_case_detected",
+                entity_type="case",
+                entity_id=case.id,
+                details={
+                    "case_number": case.case_number,
+                    "days_stagnant": days_stagnant,
+                    "status": case.status,
+                },
+            )
+
+        logger.info(
+            "check_stagnant_cases: found=%d notified=%d skipped=%d",
+            stagnant_qs.count(), notified_count, skipped_count,
+        )
+        return {"notified": notified_count, "skipped": skipped_count}
+
+    except Exception as exc:
+        logger.exception("check_stagnant_cases failed: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def send_pending_emails(self):
     """
     Запускается каждые 30 минут.
