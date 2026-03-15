@@ -80,7 +80,7 @@ def get_document_context(case) -> dict:
         "case_number": case.case_number,
         "case_basis": case.get_basis_display(),
         "case_region": case.region,
-        "case_department": case.department or "",
+        "case_department": str(case.department) if case.department else "",
         "case_status": case.get_status_display(),
         "taxpayer_name": case.taxpayer.name,
         "taxpayer_iin": case.taxpayer.iin_bin,
