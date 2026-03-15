@@ -9,12 +9,8 @@
         · {{ request.user.get_role_display }}</span>
 </div>
 
-{# ══════════════════════════════════════════════════════════════
-   ADMIN / REVIEWER
-══════════════════════════════════════════════════════════════ #}
 {% if role_group == "admin_reviewer" %}
 
-{# Счётчики статусов #}
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
         <div class="card text-center border-0 bg-white shadow-sm h-100">
@@ -50,7 +46,6 @@
     </div>
 </div>
 
-{# Таблица по офисам #}
 <div class="card mb-4 shadow-sm">
     <div class="card-header fw-semibold">
         <i class="bi bi-building"></i> Сводка по офисам
@@ -97,7 +92,6 @@
     </div>
 </div>
 
-{# Топ-5 просроченных #}
 {% if top_stagnant %}
 <div class="card shadow-sm">
     <div class="card-header fw-semibold text-danger">
@@ -139,17 +133,12 @@
 </div>
 {% endif %}
 
-{# ══════════════════════════════════════════════════════════════
-   OPERATOR / EXECUTOR
-══════════════════════════════════════════════════════════════ #}
 {% elif role_group == "operator_executor" %}
 
 <div class="row g-3">
 
-    {# Колонка: мои дела #}
     <div class="col-lg-7">
 
-        {# Дедлайны сегодня/завтра #}
         {% if upcoming_hearings or protocol_deadlines %}
         <div class="card mb-3 border-warning shadow-sm">
             <div class="card-header fw-semibold text-warning-emphasis bg-warning bg-opacity-10">
@@ -191,7 +180,6 @@
         </div>
         {% endif %}
 
-        {# Мои дела в работе #}
         <div class="card shadow-sm">
             <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-person-check"></i> Мои дела в работе</span>
@@ -239,7 +227,6 @@
 
     </div>
 
-    {# Колонка: ожидают действий #}
     <div class="col-lg-5">
         <div class="card shadow-sm">
             <div class="card-header fw-semibold">
@@ -271,9 +258,6 @@
 
 </div>
 
-{# ══════════════════════════════════════════════════════════════
-   OBSERVER
-══════════════════════════════════════════════════════════════ #}
 {% elif role_group == "observer" %}
 
 <div class="mb-3">
