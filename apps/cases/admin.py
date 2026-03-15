@@ -1,5 +1,22 @@
 from django.contrib import admin
-from .models import Taxpayer, AdministrativeCase, CaseEvent
+from .models import Department, StagnationSettings, Taxpayer, AdministrativeCase, CaseEvent
+
+
+@admin.register(Department)
+class DepartmentAdmin(admin.ModelAdmin):
+    list_display = ["name", "code", "doc_sequence", "seq_year"]
+    search_fields = ["name", "code"]
+
+
+@admin.register(StagnationSettings)
+class StagnationSettingsAdmin(admin.ModelAdmin):
+    list_display = ["stagnation_days", "notify_reviewer"]
+
+    def has_add_permission(self, request):
+        return not StagnationSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Taxpayer)
