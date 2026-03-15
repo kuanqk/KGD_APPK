@@ -118,6 +118,9 @@ def generate_document(case, doc_type: str, user) -> CaseDocument:
     3. Сохраняет CaseDocument
     4. Пишет в AuditLog
     """
+    from apps.cases.services import validate_document_date
+    validate_document_date(case, date.today())
+
     template = DocumentTemplate.objects.filter(doc_type=doc_type, is_active=True).first()
     if not template:
         raise ValueError(f"Активный шаблон типа '{doc_type}' не найден.")

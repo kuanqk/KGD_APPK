@@ -1,6 +1,8 @@
 import logging
 from datetime import date
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.utils import timezone
 
 from apps.audit.services import audit_log
 from .models import AdministrativeCase, CaseEvent, CaseEventType, CaseStatus, Taxpayer
@@ -133,6 +135,46 @@ def change_case_status(case: AdministrativeCase, new_status: str, user, comment:
 
     logger.info("Case %s status: %s → %s by %s", case.case_number, old_status, new_status, user)
     return case
+
+
+@transaction.atomic
+def allow_backdating(case: AdministrativeCase, user, comment: str) -> AdministrativeCase:
+    """Разрешает ввод документов задним числом по делу. Только admin и reviewer."""
+    if user.role not in ("admin", "reviewer"):
+        raise PermissionDenied("Разрешить ввод задним числом может только администратор или руководитель.")
+
+    case.allow_backdating = True
+    case.backdating_allowed_by = user
+    case.backdating_allowed_at = timezone.now()
+    case.backdating_comment = comment
+    case.save(update_fields=[
+        "allow_backdating", "backdating_allowed_by",
+        "backdating_allowed_at", "backdating_comment", "updated_at",
+    ])
+
+    audit_log(
+        user=user,
+        action="backdating_allowed",
+        entity_type="case",
+        entity_id=case.id,
+        details={"case_number": case.case_number, "comment": comment},
+    )
+
+    logger.info("Backdating allowed for case %s by %s", case.case_number, user)
+    return case
+
+
+def validate_document_date(case: AdministrativeCase, document_date: date) -> None:
+    """
+    Проверяет что дата документа не раньше даты открытия дела.
+    Исключение — если backdating явно разрешён.
+    """
+    case_open_date = case.created_at.date()
+    if document_date < case_open_date and not case.allow_backdating:
+        raise ValueError(
+            f"Дата документа ({document_date:%d.%m.%Y}) раньше даты открытия дела "
+            f"({case_open_date:%d.%m.%Y}). Для ввода задним числом требуется разрешение."
+        )
 
 
 def after_return_actions(case: AdministrativeCase, doc_type: str, user) -> AdministrativeCase:

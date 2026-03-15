@@ -20,6 +20,24 @@
             </span>
         </h4>
     </div>
+    {# Backdating — метка или кнопка #}
+    {% if request.user.role == 'admin' or request.user.role == 'reviewer' %}
+    <div class="ms-2">
+        {% if case.allow_backdating %}
+        <span class="badge bg-success">
+            <i class="bi bi-clock-history"></i> Ввод задним числом разрешён —
+            {{ case.backdating_allowed_by.get_full_name|default:case.backdating_allowed_by.username }}
+            {{ case.backdating_allowed_at|date:"d.m.Y H:i" }}
+        </span>
+        {% else %}
+        <button type="button" class="btn btn-sm btn-outline-warning"
+                data-bs-toggle="modal" data-bs-target="#modalBackdating">
+            <i class="bi bi-clock-history"></i> Разрешить ввод задним числом
+        </button>
+        {% endif %}
+    </div>
+    {% endif %}
+
     {# Кнопки действий при возврате почтового отправления #}
     {% if request.user.role == 'admin' or request.user.role == 'operator' %}
     {% if case.status == 'mail_returned' or case.status == 'act_created' or case.status == 'der_sent' %}
@@ -529,4 +547,42 @@
         {% endif %}
     </div>
 </div>
+
+{# Модальное окно: разрешить ввод задним числом #}
+{% if request.user.role == 'admin' or request.user.role == 'reviewer' %}
+{% if not case.allow_backdating %}
+<div class="modal fade" id="modalBackdating" tabindex="-1" aria-labelledby="modalBackdatingLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'cases:allow_backdating' pk=case.pk %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalBackdatingLabel">
+                        <i class="bi bi-clock-history"></i> Разрешить ввод задним числом
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-3">
+                        Разрешение позволяет создавать документы с датой ранее даты открытия дела
+                        (<strong>{{ case.created_at|date:"d.m.Y" }}</strong>).
+                    </p>
+                    <div class="mb-3">
+                        <label for="backdatingComment" class="form-label fw-semibold">Комментарий <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="backdatingComment" name="comment" rows="3"
+                                  placeholder="Укажите причину разрешения ввода задним числом" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-check-lg"></i> Разрешить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endif %}
 {% endblock %}

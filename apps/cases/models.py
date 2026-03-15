@@ -140,6 +140,29 @@ class AdministrativeCase(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
     closed_at = models.DateTimeField(null=True, blank=True, verbose_name="Дата закрытия")
 
+    # Контроль backdating
+    allow_backdating = models.BooleanField(
+        default=False,
+        verbose_name="Разрешён ввод задним числом",
+    )
+    backdating_allowed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="backdating_approvals",
+        verbose_name="Разрешил задним числом",
+    )
+    backdating_allowed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Дата разрешения задним числом",
+    )
+    backdating_comment = models.TextField(
+        blank=True,
+        verbose_name="Комментарий к вводу задним числом",
+    )
+
     objects = CaseQuerySet.as_manager()
 
     class Meta:

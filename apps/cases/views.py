@@ -1,13 +1,16 @@
 import logging
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
 from django.db.models import Q
-from django.shortcuts import redirect
+from django.http import Http404
+from django.shortcuts import get_object_or_404, redirect
+from django.views import View
 from django.views.generic import ListView, DetailView, FormView
 
 from .forms import CaseCreateForm, CaseFilterForm
 from .models import AdministrativeCase
-from .services import create_case
+from .services import create_case, allow_backdating
 
 logger = logging.getLogger(__name__)
 
@@ -118,3 +121,28 @@ class CaseCreateView(LoginRequiredMixin, FormView):
         )
         messages.success(self.request, f"Дело {case.case_number} успешно создано.")
         return redirect("cases:detail", pk=case.pk)
+
+
+class AllowBackdatingView(LoginRequiredMixin, View):
+    """POST cases/<pk>/allow-backdating/ — разрешить ввод документов задним числом."""
+
+    def post(self, request, pk):
+        if request.user.role not in ("admin", "reviewer"):
+            raise Http404
+
+        case = get_object_or_404(
+            AdministrativeCase.objects.for_user(request.user),
+            pk=pk,
+        )
+        comment = request.POST.get("comment", "").strip()
+
+        try:
+            allow_backdating(case, request.user, comment)
+            messages.success(
+                request,
+                f"Ввод документов задним числом по делу {case.case_number} разрешён."
+            )
+        except PermissionDenied as e:
+            messages.error(request, str(e))
+
+        return redirect("cases:detail", pk=pk)
