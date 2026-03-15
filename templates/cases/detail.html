@@ -236,7 +236,6 @@
         {% with deliveries=case.documents.all %}
         {% comment %}Собираем записи доставки через документы дела{% endcomment %}
         {% endwith %}
-        {% with all_deliveries=case|get_deliveries %}
         {% if case.documents.exists %}
         <table class="table table-sm table-hover mb-0">
             <thead class="table-light">
@@ -300,7 +299,6 @@
         {% else %}
         <p class="text-muted p-3 mb-0">Отправок нет. Сначала сформируйте документ.</p>
         {% endif %}
-        {% endwith %}
     </div>
 </div>
 

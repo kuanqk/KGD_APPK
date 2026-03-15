@@ -19,34 +19,45 @@
             <div class="card">
                 <div class="card-header fw-semibold"><i class="bi bi-person"></i> Данные налогоплательщика</div>
                 <div class="card-body">
-                    {% for field_name in "iin_bin taxpayer_name taxpayer_type taxpayer_address taxpayer_phone taxpayer_email"|split:" " %}
-                    {% with field=form|getitem:field_name %}
                     <div class="mb-3">
-                        <label class="form-label fw-semibold small">{{ field.label }}
-                            {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
-                        </label>
-                        {% if field.field.widget.input_type == 'select' %}
-                        <select name="{{ field.html_name }}" class="form-select form-select-sm{% if field.errors %} is-invalid{% endif %}">
-                            {% for val, lbl in field.field.choices %}
-                            <option value="{{ val }}" {% if field.value == val %}selected{% endif %}>{{ lbl }}</option>
+                        <label class="form-label fw-semibold small">{{ form.iin_bin.label }} <span class="text-danger">*</span></label>
+                        <input type="text" name="{{ form.iin_bin.html_name }}" value="{{ form.iin_bin.value|default:'' }}"
+                               class="form-control form-control-sm{% if form.iin_bin.errors %} is-invalid{% endif %}">
+                        {% for error in form.iin_bin.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">{{ form.taxpayer_name.label }} <span class="text-danger">*</span></label>
+                        <input type="text" name="{{ form.taxpayer_name.html_name }}" value="{{ form.taxpayer_name.value|default:'' }}"
+                               class="form-control form-control-sm{% if form.taxpayer_name.errors %} is-invalid{% endif %}">
+                        {% for error in form.taxpayer_name.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">{{ form.taxpayer_type.label }}</label>
+                        <select name="{{ form.taxpayer_type.html_name }}" class="form-select form-select-sm{% if form.taxpayer_type.errors %} is-invalid{% endif %}">
+                            {% for val, lbl in form.taxpayer_type.field.choices %}
+                            <option value="{{ val }}" {% if form.taxpayer_type.value == val %}selected{% endif %}>{{ lbl }}</option>
                             {% endfor %}
                         </select>
-                        {% elif field.field.widget.attrs.rows %}
-                        <textarea name="{{ field.html_name }}" rows="{{ field.field.widget.attrs.rows }}"
-                                  class="form-control form-control-sm{% if field.errors %} is-invalid{% endif %}">{{ field.value|default:'' }}</textarea>
-                        {% else %}
-                        <input type="{{ field.field.widget.input_type|default:'text' }}"
-                               name="{{ field.html_name }}"
-                               value="{{ field.value|default:'' }}"
-                               class="form-control form-control-sm{% if field.errors %} is-invalid{% endif %}"
-                               {% if field.field.widget.attrs.placeholder %}placeholder="{{ field.field.widget.attrs.placeholder }}"{% endif %}>
-                        {% endif %}
-                        {% for error in field.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                        {% endfor %}
+                        {% for error in form.taxpayer_type.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                     </div>
-                    {% endwith %}
-                    {% endfor %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">{{ form.taxpayer_address.label }}</label>
+                        <textarea name="{{ form.taxpayer_address.html_name }}" rows="3"
+                                  class="form-control form-control-sm{% if form.taxpayer_address.errors %} is-invalid{% endif %}">{{ form.taxpayer_address.value|default:'' }}</textarea>
+                        {% for error in form.taxpayer_address.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">{{ form.taxpayer_phone.label }}</label>
+                        <input type="text" name="{{ form.taxpayer_phone.html_name }}" value="{{ form.taxpayer_phone.value|default:'' }}"
+                               class="form-control form-control-sm{% if form.taxpayer_phone.errors %} is-invalid{% endif %}">
+                        {% for error in form.taxpayer_phone.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">{{ form.taxpayer_email.label }}</label>
+                        <input type="email" name="{{ form.taxpayer_email.html_name }}" value="{{ form.taxpayer_email.value|default:'' }}"
+                               class="form-control form-control-sm{% if form.taxpayer_email.errors %} is-invalid{% endif %}">
+                        {% for error in form.taxpayer_email.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
                 </div>
             </div>
         </div>

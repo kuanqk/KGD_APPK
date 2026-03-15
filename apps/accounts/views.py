@@ -6,8 +6,9 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views import View
+from django.utils.decorators import method_decorator
 from django.views.generic import ListView, TemplateView, CreateView, UpdateView
-from ratelimit.utils import is_ratelimited
+from django_ratelimit.decorators import ratelimit
 
 from apps.audit.services import audit_log
 from .forms import UserCreateForm, UserUpdateForm
@@ -18,32 +19,27 @@ logger = logging.getLogger(__name__)
 
 class AdminRequiredMixin:
     def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_authenticated or request.user.role != "admin":
+        if not request.user.is_authenticated or (
+            request.user.role != "admin" and not request.user.is_superuser
+        ):
             raise Http404
         return super().dispatch(request, *args, **kwargs)
 
 
 # ─── Auth views ───────────────────────────────────────────────────────────────
 
+@method_decorator(ratelimit(key="ip", rate="5/m", method="POST", block=False), name="dispatch")
 class AppkLoginView(LoginView):
     template_name = "registration/login.html"
     redirect_authenticated_user = True
 
     def dispatch(self, request, *args, **kwargs):
-        if request.method == "POST":
-            limited = is_ratelimited(
-                request,
-                fn=self.dispatch,
-                key="ip",
-                rate="5/m",
-                increment=True,
+        if getattr(request, "limited", False):
+            return HttpResponse(
+                "Слишком много попыток входа. Подождите минуту и попробуйте снова.",
+                status=429,
+                content_type="text/plain; charset=utf-8",
             )
-            if limited:
-                return HttpResponse(
-                    "Слишком много попыток входа. Подождите минуту и попробуйте снова.",
-                    status=429,
-                    content_type="text/plain; charset=utf-8",
-                )
         return super().dispatch(request, *args, **kwargs)
 
 

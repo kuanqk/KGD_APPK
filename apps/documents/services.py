@@ -83,12 +83,15 @@ def _render_template_body(body_template: str, context: dict) -> str:
 
 
 def _render_pdf(html_content: str) -> bytes:
-    """Конвертирует HTML в PDF через WeasyPrint."""
+    """Конвертирует HTML в PDF через xhtml2pdf. При ошибке — fallback на HTML."""
+    from io import BytesIO
     try:
-        from weasyprint import HTML
-        return HTML(string=html_content, base_url=str(settings.BASE_DIR)).write_pdf()
-    except ImportError:
-        logger.warning("WeasyPrint не установлен — возвращаем HTML как bytes")
+        from xhtml2pdf import pisa
+        buffer = BytesIO()
+        pisa.CreatePDF(html_content.encode("utf-8"), dest=buffer)
+        return buffer.getvalue()
+    except Exception as exc:
+        logger.error("xhtml2pdf ошибка: %s", exc)
         return html_content.encode("utf-8")
 
 

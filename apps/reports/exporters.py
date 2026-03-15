@@ -241,10 +241,13 @@ def export_pdf(report_type: str, filters: dict, user) -> HttpResponse:
     })
 
     try:
-        from weasyprint import HTML
-        pdf_bytes = HTML(string=html).write_pdf()
-    except ImportError:
-        logger.warning("WeasyPrint not installed — returning HTML as fallback")
+        from io import BytesIO
+        from xhtml2pdf import pisa
+        buffer = BytesIO()
+        pisa.CreatePDF(html.encode("utf-8"), dest=buffer)
+        pdf_bytes = buffer.getvalue()
+    except Exception as exc:
+        logger.error("xhtml2pdf ошибка: %s — возвращаем HTML", exc)
         pdf_bytes = html.encode("utf-8")
         audit_log(
             user=user,
