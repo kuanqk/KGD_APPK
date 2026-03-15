@@ -42,6 +42,7 @@
                 <tr>
                     <th>Пользователь</th>
                     <th>Роль</th>
+                    <th>Подразделение</th>
                     <th>Регион</th>
                     <th>Email</th>
                     <th>Должность</th>
@@ -66,6 +67,7 @@
                             {{ u.get_role_display }}
                         </span>
                     </td>
+                    <td class="small">{{ u.department.name|default:"—" }}</td>
                     <td class="small">{{ u.region|default:"—" }}</td>
                     <td class="small">{{ u.email|default:"—" }}</td>
                     <td class="small">{{ u.position|default:"—" }}</td>
@@ -96,7 +98,7 @@
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="7" class="text-muted p-3">Пользователи не найдены.</td></tr>
+                <tr><td colspan="8" class="text-muted p-3">Пользователи не найдены.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

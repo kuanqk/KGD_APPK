@@ -56,6 +56,13 @@
                             <label class="form-label small fw-semibold">Должность</label>
                             {{ form.position }}
                         </div>
+                        {% if form.department %}
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Подразделение</label>
+                            {{ form.department }}
+                            {% if form.department.errors %}<div class="text-danger small">{{ form.department.errors }}</div>{% endif %}
+                        </div>
+                        {% endif %}
 
                         {% if form.password1 %}
                         <div class="col-md-6">

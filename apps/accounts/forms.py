@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth.password_validation import validate_password
+from apps.cases.models import Department
 from .models import User, UserRole
 
 
@@ -44,9 +45,17 @@ class UserCreateForm(forms.ModelForm):
 
 
 class UserUpdateForm(forms.ModelForm):
+    department = forms.ModelChoiceField(
+        queryset=Department.objects.all(),
+        required=False,
+        label="Подразделение",
+        empty_label="— не указано —",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+
     class Meta:
         model = User
-        fields = ["first_name", "last_name", "email", "role", "region", "phone", "position", "is_active"]
+        fields = ["first_name", "last_name", "email", "role", "region", "phone", "position", "department", "is_active"]
         widgets = {
             "first_name": forms.TextInput(attrs={"class": "form-control"}),
             "last_name": forms.TextInput(attrs={"class": "form-control"}),
