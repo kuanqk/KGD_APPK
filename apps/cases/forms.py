@@ -63,6 +63,13 @@ class CaseCreateForm(forms.Form):
         return value
 
 
+class TaxpayerImportForm(forms.Form):
+    file = forms.FileField(
+        label="Файл Excel (.xlsx)",
+        widget=forms.FileInput(attrs={"accept": ".xlsx"}),
+    )
+
+
 class CaseFilterForm(forms.Form):
     status = forms.ChoiceField(
         required=False,
@@ -70,6 +77,12 @@ class CaseFilterForm(forms.Form):
         choices=[("", "Все статусы")] + list(
             __import__("apps.cases.models", fromlist=["CaseStatus"]).CaseStatus.choices
         ),
+    )
+    department = forms.ModelChoiceField(
+        queryset=Department.objects.all(),
+        required=False,
+        label="Офис",
+        empty_label="Все офисы",
     )
     region = forms.CharField(max_length=100, required=False, label="Регион")
     responsible_user = forms.ModelChoiceField(

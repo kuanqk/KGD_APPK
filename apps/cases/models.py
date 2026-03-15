@@ -103,11 +103,16 @@ class Taxpayer(models.Model):
 
 class CaseQuerySet(models.QuerySet):
     def for_user(self, user):
-        if user.role == "observer":
-            return self.filter(region=user.region)
+        if user.role in ("admin", "reviewer"):
+            return self
         if user.role == "executor":
             return self.filter(responsible_user=user)
-        return self  # admin, operator, reviewer — всё
+        # operator, observer — фильтр по офису; fallback на регион если офис не задан
+        if user.department_id:
+            return self.filter(department=user.department)
+        if user.region:
+            return self.filter(region=user.region)
+        return self.none()
 
 
 class AdministrativeCase(models.Model):

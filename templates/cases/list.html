@@ -25,6 +25,19 @@
                     {% endfor %}
                 </select>
             </div>
+            {% if show_dept_filter %}
+            <div class="col-md-2">
+                <label class="form-label small mb-1">Офис</label>
+                <select name="department" class="form-select form-select-sm">
+                    <option value="">Все офисы</option>
+                    {% for dept in filter_form.fields.department.queryset %}
+                    <option value="{{ dept.pk }}" {% if filter_form.department.value == dept.pk|stringformat:'s' %}selected{% endif %}>
+                        {{ dept.code }} — {{ dept.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
             <div class="col-md-2">
                 <label class="form-label small mb-1">Регион</label>
                 <input type="text" name="region" class="form-control form-control-sm"

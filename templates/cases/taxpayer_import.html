@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Импорт налогоплательщиков — АППК{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'cases:list' %}" class="text-decoration-none text-muted small">
+        <i class="bi bi-arrow-left"></i> Реестр дел
+    </a>
+    <h4 class="mb-0 mt-1"><i class="bi bi-file-earmark-arrow-up"></i> Импорт налогоплательщиков из Excel</h4>
+</div>
+
+<div class="row">
+    <div class="col-md-5 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold"><i class="bi bi-upload"></i> Загрузка файла</div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Загрузите файл <strong>.xlsx</strong> с колонками:<br>
+                    <code>ИИН/БИН | Наименование | Тип (ЮЛ/ФЛ/ИП) | Адрес | Телефон | Email</code>
+                </p>
+
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">{{ form.file.label }}</label>
+                        <input type="file" name="file" accept=".xlsx"
+                               class="form-control form-control-sm{% if form.file.errors %} is-invalid{% endif %}">
+                        {% for error in form.file.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-upload"></i> Импортировать
+                        </button>
+                        <a href="{% url 'cases:list' %}" class="btn btn-outline-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-3 shadow-sm border-info">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-file-earmark-excel text-success fs-4"></i>
+                    <div>
+                        <div class="small fw-semibold">Шаблон для заполнения</div>
+                        <a href="{% url 'cases:taxpayer_import_template' %}" class="small text-decoration-none">
+                            <i class="bi bi-download"></i> Скачать taxpayer_import_template.xlsx
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3 shadow-sm">
+            <div class="card-header fw-semibold small"><i class="bi bi-info-circle"></i> Правила заполнения</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr><th>Колонка</th><th>Обязательно</th><th>Примечание</th></tr>
+                    </thead>
+                    <tbody class="small">
+                        <tr><td>ИИН/БИН</td><td class="text-danger">Да</td><td>Ровно 12 цифр</td></tr>
+                        <tr><td>Наименование</td><td class="text-danger">Да</td><td>Полное название или ФИО</td></tr>
+                        <tr><td>Тип</td><td>Нет</td><td>ЮЛ / ФЛ / ИП (по умолчанию ЮЛ)</td></tr>
+                        <tr><td>Адрес</td><td>Нет</td><td></td></tr>
+                        <tr><td>Телефон</td><td>Нет</td><td></td></tr>
+                        <tr><td>Email</td><td>Нет</td><td></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        {# Результаты после импорта #}
+        {% if created_count is not None or updated_count is not None %}
+        <div class="d-flex gap-3 mb-3">
+            <div class="card text-center border-0 bg-success bg-opacity-10 shadow-sm flex-fill">
+                <div class="card-body py-2">
+                    <div class="fs-3 fw-bold text-success">{{ created_count }}</div>
+                    <div class="small text-muted">Создано</div>
+                </div>
+            </div>
+            <div class="card text-center border-0 bg-primary bg-opacity-10 shadow-sm flex-fill">
+                <div class="card-body py-2">
+                    <div class="fs-3 fw-bold text-primary">{{ updated_count }}</div>
+                    <div class="small text-muted">Обновлено</div>
+                </div>
+            </div>
+            <div class="card text-center border-0 {% if errors %}bg-danger bg-opacity-10{% else %}bg-light{% endif %} shadow-sm flex-fill">
+                <div class="card-body py-2">
+                    <div class="fs-3 fw-bold {% if errors %}text-danger{% endif %}">{{ errors|length }}</div>
+                    <div class="small text-muted">Ошибок</div>
+                </div>
+            </div>
+        </div>
+
+        {% if results %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-header fw-semibold small">Результаты строк</div>
+            <div class="card-body p-0" style="max-height:350px;overflow-y:auto;">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light sticky-top">
+                        <tr><th>Строка</th><th>ИИН/БИН</th><th>Наименование</th><th>Статус</th></tr>
+                    </thead>
+                    <tbody class="small">
+                        {% for r in results %}
+                        <tr>
+                            <td class="text-muted">{{ r.row }}</td>
+                            <td class="font-monospace">{{ r.iin_bin }}</td>
+                            <td>{{ r.name }}</td>
+                            <td>
+                                <span class="badge
+                                    {% if r.status == 'создан' %}bg-success
+                                    {% elif r.status == 'обновлён' %}bg-primary
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ r.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if errors %}
+        <div class="card shadow-sm border-danger">
+            <div class="card-header fw-semibold small text-danger"><i class="bi bi-exclamation-triangle"></i> Ошибки</div>
+            <div class="card-body p-0" style="max-height:250px;overflow-y:auto;">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light sticky-top">
+                        <tr><th>Строка</th><th>ИИН/БИН</th><th>Причина</th></tr>
+                    </thead>
+                    <tbody class="small">
+                        {% for e in errors %}
+                        <tr class="table-danger">
+                            <td>{{ e.row }}</td>
+                            <td class="font-monospace">{{ e.iin_bin }}</td>
+                            <td>{{ e.reason }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
