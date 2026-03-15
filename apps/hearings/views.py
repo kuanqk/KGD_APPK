@@ -86,6 +86,18 @@ class HearingDetailView(LoginRequiredMixin, DetailView):
             context["protocol"] = self.object.protocol
         except HearingProtocol.DoesNotExist:
             context["protocol"] = None
+
+        # Явно ищем CaseDocument протокола чтобы шаблон получил валидный pk
+        from apps.documents.models import DocumentType, CaseDocument
+        context["protocol_doc"] = (
+            CaseDocument.objects
+            .filter(
+                case=self.object.case,
+                doc_type=DocumentType.HEARING_PROTOCOL,
+            )
+            .order_by("-created_at")
+            .first()
+        )
         return context
 
 

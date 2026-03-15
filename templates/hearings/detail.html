@@ -84,8 +84,8 @@
                     <div class="text-muted small mb-1">Краткое содержание:</div>
                     <div class="border rounded p-2 bg-light small">{{ protocol.result_summary }}</div>
                 </div>
-                {% if protocol.file_path %}
-                <a href="{% url 'documents:download' pk=0 %}" class="btn btn-sm btn-outline-success">
+                {% if protocol_doc %}
+                <a href="{% url 'documents:download' pk=protocol_doc.pk %}" class="btn btn-sm btn-outline-success">
                     <i class="bi bi-download"></i> Скачать протокол
                 </a>
                 {% endif %}

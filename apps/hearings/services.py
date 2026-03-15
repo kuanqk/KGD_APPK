@@ -201,10 +201,23 @@ def create_protocol(
         from apps.documents.models import DocumentType
         from apps.documents.services import generate_document
         doc = generate_document(hearing.case, DocumentType.HEARING_PROTOCOL, user)
+        if not doc or not doc.pk:
+            logger.error(
+                "create_protocol: generate_document вернул документ без pk (case=%s)",
+                hearing.case.case_number,
+            )
+            raise ValueError("Документ протокола не был сохранён (doc.pk is None).")
         protocol.file_path = doc.file_path
         protocol.save(update_fields=["file_path"])
+        logger.info(
+            "Protocol document saved: doc.pk=%s file_path=%s", doc.pk, doc.file_path
+        )
     except ValueError as e:
-        logger.warning("Protocol PDF not generated (no template?): %s", e)
+        logger.error(
+            "create_protocol: PDF не сгенерирован для case=%s: %s",
+            hearing.case.case_number, e,
+        )
+        raise
 
     CaseEvent.objects.create(
         case=hearing.case,
