@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     CaseListView, CaseDetailView, CaseCreateView,
     AllowBackdatingView, TaxpayerImportView, taxpayer_import_template,
+    ValidateIinView,
 )
 
 app_name = "cases"
@@ -13,4 +14,5 @@ urlpatterns = [
     path("<int:pk>/allow-backdating/", AllowBackdatingView.as_view(), name="allow_backdating"),
     path("taxpayers/import/", TaxpayerImportView.as_view(), name="taxpayer_import"),
     path("taxpayers/import/template/", taxpayer_import_template, name="taxpayer_import_template"),
+    path("validate-iin/", ValidateIinView.as_view(), name="validate_iin"),
 ]

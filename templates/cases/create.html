@@ -21,9 +21,11 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <label class="form-label fw-semibold small">{{ form.iin_bin.label }} <span class="text-danger">*</span></label>
-                        <input type="text" name="{{ form.iin_bin.html_name }}" value="{{ form.iin_bin.value|default:'' }}"
-                               class="form-control form-control-sm{% if form.iin_bin.errors %} is-invalid{% endif %}">
-                        {% for error in form.iin_bin.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                        <input type="text" id="id_iin_bin" name="{{ form.iin_bin.html_name }}" value="{{ form.iin_bin.value|default:'' }}"
+                               class="form-control form-control-sm{% if form.iin_bin.errors %} is-invalid{% endif %}"
+                               maxlength="12" autocomplete="off">
+                        <div id="iin_bin_feedback" class="form-text"></div>
+                        {% for error in form.iin_bin.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold small">{{ form.taxpayer_name.label }} <span class="text-danger">*</span></label>
@@ -33,11 +35,15 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold small">{{ form.taxpayer_type.label }}</label>
-                        <select name="{{ form.taxpayer_type.html_name }}" class="form-select form-select-sm{% if form.taxpayer_type.errors %} is-invalid{% endif %}">
+                        <select id="id_taxpayer_type" name="{{ form.taxpayer_type.html_name }}"
+                                class="form-select form-select-sm{% if form.taxpayer_type.errors %} is-invalid{% endif %}"
+                                disabled>
                             {% for val, lbl in form.taxpayer_type.field.choices %}
                             <option value="{{ val }}" {% if form.taxpayer_type.value == val %}selected{% endif %}>{{ lbl }}</option>
                             {% endfor %}
                         </select>
+                        <input type="hidden" id="id_taxpayer_type_hidden" name="{{ form.taxpayer_type.html_name }}" value="{{ form.taxpayer_type.value|default:'legal' }}">
+                        <div class="form-text text-muted small">Определяется автоматически по ИИН/БИН</div>
                         {% for error in form.taxpayer_type.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                     </div>
                     <div class="mb-3">
@@ -139,4 +145,73 @@
         <a href="{% url 'cases:list' %}" class="btn btn-secondary">Отмена</a>
     </div>
 </form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const iinInput = document.getElementById('id_iin_bin');
+    const feedback = document.getElementById('iin_bin_feedback');
+    const typeSelect = document.getElementById('id_taxpayer_type');
+    const typeHidden = document.getElementById('id_taxpayer_type_hidden');
+    const validateUrl = '{% url "cases:validate_iin" %}';
+    const csrfToken = '{{ csrf_token }}';
+
+    const TYPE_MAP = { 'IIN': 'individual', 'BIN': 'legal' };
+    const TYPE_LABEL = { 'IIN': '✅ ИИН (физическое лицо)', 'BIN': '✅ БИН (юридическое лицо / ИП)' };
+
+    let debounceTimer = null;
+
+    function setType(value) {
+        typeHidden.value = value;
+        for (const opt of typeSelect.options) {
+            opt.selected = opt.value === value;
+        }
+    }
+
+    function validate(value) {
+        clearTimeout(debounceTimer);
+        if (value.length < 12) {
+            feedback.textContent = '';
+            feedback.className = 'form-text';
+            return;
+        }
+        debounceTimer = setTimeout(function () {
+            const data = new FormData();
+            data.append('iin_bin', value);
+            fetch(validateUrl, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+                body: data,
+            })
+            .then(r => r.json())
+            .then(json => {
+                if (json.valid) {
+                    feedback.textContent = TYPE_LABEL[json.type] || '✅ Верно';
+                    feedback.className = 'form-text text-success fw-semibold';
+                    setType(TYPE_MAP[json.type] || 'legal');
+                    iinInput.classList.remove('is-invalid');
+                    iinInput.classList.add('is-valid');
+                } else {
+                    feedback.textContent = '❌ ' + json.error;
+                    feedback.className = 'form-text text-danger';
+                    iinInput.classList.remove('is-valid');
+                    iinInput.classList.add('is-invalid');
+                }
+            })
+            .catch(function () {
+                feedback.textContent = '';
+            });
+        }, 400);
+    }
+
+    iinInput.addEventListener('input', function () {
+        validate(this.value.trim());
+    });
+
+    if (iinInput.value.length === 12) {
+        validate(iinInput.value.trim());
+    }
+})();
+</script>
 {% endblock %}

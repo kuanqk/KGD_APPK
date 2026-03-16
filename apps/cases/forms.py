@@ -1,6 +1,7 @@
 from django import forms
 from apps.accounts.models import User
 from .models import AdministrativeCase, Department, Taxpayer, CaseBasis, TaxpayerType
+from .validators import validate_iin_bin
 
 
 class TaxpayerForm(forms.ModelForm):
@@ -26,7 +27,11 @@ class CaseCreateForm(forms.Form):
         widget=forms.TextInput(attrs={"placeholder": "12 цифр"}),
     )
     taxpayer_name = forms.CharField(max_length=500, label="Наименование / ФИО")
-    taxpayer_type = forms.ChoiceField(choices=TaxpayerType.choices, label="Тип НП")
+    taxpayer_type = forms.ChoiceField(
+        choices=TaxpayerType.choices,
+        label="Тип НП",
+        widget=forms.Select(attrs={"readonly": "true"}),
+    )
     taxpayer_address = forms.CharField(
         required=False,
         label="Адрес НП",
@@ -56,11 +61,31 @@ class CaseCreateForm(forms.Form):
         empty_label="— не назначен —",
     )
 
+    _IIN_BIN_ERRORS = {
+        "invalid_format": "ИИН/БИН должен содержать 12 цифр.",
+        "invalid_checksum": "Неверная контрольная сумма ИИН/БИН.",
+        "invalid_birthdate": "Некорректная дата рождения в ИИН.",
+        "invalid_registration_date": "Некорректная дата регистрации в БИН.",
+        "unknown_type": "Не удалось определить тип ИИН/БИН.",
+    }
+
     def clean_iin_bin(self):
         value = self.cleaned_data["iin_bin"].strip()
-        if not value.isdigit() or len(value) != 12:
-            raise forms.ValidationError("ИИН/БИН должен содержать ровно 12 цифр.")
+        valid, result = validate_iin_bin(value)
+        if not valid:
+            raise forms.ValidationError(
+                self._IIN_BIN_ERRORS.get(result, "Неверный ИИН/БИН.")
+            )
+        # Сохраняем определённый тип для использования в clean()
+        self._iin_bin_type = result
         return value
+
+    def clean(self):
+        cleaned = super().clean()
+        # Автоматически устанавливаем тип НП по результату валидации ИИН/БИН
+        if hasattr(self, "_iin_bin_type"):
+            cleaned["taxpayer_type"] = "individual" if self._iin_bin_type == "IIN" else "legal"
+        return cleaned
 
 
 class TaxpayerImportForm(forms.Form):
