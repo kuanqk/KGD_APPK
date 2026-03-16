@@ -1,7 +1,7 @@
 import logging
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from apps.cases.models import Department
+from apps.cases.models import Department, Position
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +32,12 @@ class User(AbstractUser):
         blank=True,
         verbose_name="Телефон",
     )
-    position = models.CharField(
-        max_length=200,
+    position = models.ForeignKey(
+        Position,
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
+        related_name="users",
         verbose_name="Должность",
     )
     department = models.ForeignKey(

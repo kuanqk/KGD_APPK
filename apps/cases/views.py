@@ -9,8 +9,9 @@ from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import ListView, DetailView, FormView
 
+from django.views.generic.edit import CreateView, UpdateView
 from .forms import CaseCreateForm, CaseFilterForm, TaxpayerImportForm
-from .models import AdministrativeCase, StagnationSettings, Taxpayer, TaxpayerType
+from .models import AdministrativeCase, StagnationSettings, Taxpayer, TaxpayerType, Region, CaseBasis, CaseCategory, Position
 from .services import create_case, allow_backdating
 from .validators import KZValidator, IIN_BIN_ERRORS, PHONE_ERRORS
 
@@ -379,3 +380,305 @@ class ValidateIinView(LoginRequiredMixin, View):
             "valid": False,
             "error": IIN_BIN_ERRORS.get(result.error, "Неверный ИИН/БИН."),
         })
+
+
+# ── Справочники (только admin) ────────────────────────────────────────────────
+
+class ReferenceAdminMixin(LoginRequiredMixin):
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or request.user.role != "admin":
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+
+class ReferenceIndexView(ReferenceAdminMixin, View):
+    def get(self, request):
+        from django.shortcuts import render
+        return render(request, "cases/references/list.html", {
+            "counts": {
+                "region": Region.objects.count(),
+                "basis": CaseBasis.objects.count(),
+                "category": CaseCategory.objects.count(),
+                "position": Position.objects.count(),
+            }
+        })
+
+
+# ── Базовые generic views для справочников ────────────────────────────────────
+
+class RefListView(ReferenceAdminMixin, ListView):
+    template_name = "cases/references/ref_list.html"
+    paginate_by = 50
+    ref_title = ""
+    create_url_name = ""   # полное имя с namespace, напр. "cases:region_create"
+    update_url_name = ""
+    toggle_url_name = ""
+    import_url_name = ""
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        q = self.request.GET.get("q", "").strip()
+        if q:
+            qs = qs.filter(name__icontains=q)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["ref_title"] = self.ref_title
+        ctx["create_url_name"] = self.create_url_name
+        ctx["update_url_name"] = self.update_url_name
+        ctx["toggle_url_name"] = self.toggle_url_name
+        ctx["import_url_name"] = self.import_url_name
+        ctx["q"] = self.request.GET.get("q", "")
+        return ctx
+
+
+class RefCreateView(ReferenceAdminMixin, CreateView):
+    template_name = "cases/references/ref_form.html"
+    ref_title = ""
+    list_url_name = ""   # полное имя с namespace
+
+    def get_success_url(self):
+        from django.urls import reverse
+        return reverse(self.list_url_name)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["ref_title"] = self.ref_title
+        ctx["list_url_name"] = self.list_url_name
+        ctx["action"] = "Добавить"
+        return ctx
+
+
+class RefUpdateView(ReferenceAdminMixin, UpdateView):
+    template_name = "cases/references/ref_form.html"
+    ref_title = ""
+    list_url_name = ""
+
+    def get_success_url(self):
+        from django.urls import reverse
+        return reverse(self.list_url_name)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["ref_title"] = self.ref_title
+        ctx["list_url_name"] = self.list_url_name
+        ctx["action"] = "Редактировать"
+        return ctx
+
+
+class RefToggleView(ReferenceAdminMixin, View):
+    model = None
+    list_url_name = ""
+
+    def post(self, request, pk):
+        from django.urls import reverse
+        obj = get_object_or_404(self.model, pk=pk)
+        obj.is_active = not obj.is_active
+        obj.save(update_fields=["is_active"])
+        return redirect(reverse(self.list_url_name))
+
+
+class RefImportView(ReferenceAdminMixin, View):
+    model = None
+    list_url_name = ""
+    has_legal_ref = False
+    has_code = True   # Position не имеет поля code
+
+    def post(self, request):
+        import openpyxl
+        from django.urls import reverse
+        file = request.FILES.get("file")
+        if not file:
+            messages.error(request, "Файл не выбран.")
+            return redirect(reverse(self.list_url_name))
+
+        created = updated = errors = 0
+        try:
+            wb = openpyxl.load_workbook(file, read_only=True, data_only=True)
+            ws = wb.active
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                try:
+                    if self.has_code:
+                        code = str(row[0] or "").strip()
+                        name = str(row[1] or "").strip() if len(row) > 1 else ""
+                        legal_ref = str(row[2] or "").strip() if (self.has_legal_ref and len(row) > 2) else ""
+                        if not code or not name:
+                            continue
+                        defaults = {"name": name}
+                        if self.has_legal_ref:
+                            defaults["legal_ref"] = legal_ref
+                        obj, was_created = self.model.objects.get_or_create(code=code, defaults=defaults)
+                    else:
+                        name = str(row[0] or "").strip()
+                        if not name:
+                            continue
+                        obj, was_created = self.model.objects.get_or_create(name=name)
+                        defaults = {}
+
+                    if was_created:
+                        created += 1
+                    else:
+                        for k, v in defaults.items():
+                            setattr(obj, k, v)
+                        if defaults:
+                            obj.save()
+                        updated += 1
+                except Exception:
+                    errors += 1
+            logger.info("RefImport %s: +%d ~%d err%d", self.model.__name__, created, updated, errors)
+        except Exception as e:
+            messages.error(request, f"Ошибка чтения файла: {e}")
+            return redirect(reverse(self.list_url_name))
+
+        messages.success(
+            request,
+            f"Импорт завершён: создано {created}, обновлено {updated}, ошибок {errors}."
+        )
+        return redirect(reverse(self.list_url_name))
+
+
+# ── Region ────────────────────────────────────────────────────────────────────
+
+class RegionListView(RefListView):
+    model = Region
+    template_name = "cases/references/region_list.html"
+    ref_title = "Регионы"
+    create_url_name = "cases:region_create"
+    update_url_name = "cases:region_update"
+    toggle_url_name = "cases:region_toggle"
+    import_url_name = "cases:region_import"
+
+
+class RegionCreateView(RefCreateView):
+    model = Region
+    fields = ["code", "name", "is_active"]
+    ref_title = "Регионы"
+    list_url_name = "cases:region_list"
+
+
+class RegionUpdateView(RefUpdateView):
+    model = Region
+    fields = ["code", "name", "is_active"]
+    ref_title = "Регионы"
+    list_url_name = "cases:region_list"
+
+
+class RegionToggleView(RefToggleView):
+    model = Region
+    list_url_name = "cases:region_list"
+
+
+class RegionImportView(RefImportView):
+    model = Region
+    list_url_name = "cases:region_list"
+
+
+# ── CaseBasis ─────────────────────────────────────────────────────────────────
+
+class BasisListView(RefListView):
+    model = CaseBasis
+    template_name = "cases/references/basis_list.html"
+    ref_title = "Основания дел"
+    create_url_name = "cases:basis_create"
+    update_url_name = "cases:basis_update"
+    toggle_url_name = "cases:basis_toggle"
+    import_url_name = "cases:basis_import"
+
+
+class BasisCreateView(RefCreateView):
+    model = CaseBasis
+    fields = ["code", "name", "legal_ref", "is_active"]
+    ref_title = "Основания дел"
+    list_url_name = "cases:basis_list"
+
+
+class BasisUpdateView(RefUpdateView):
+    model = CaseBasis
+    fields = ["code", "name", "legal_ref", "is_active"]
+    ref_title = "Основания дел"
+    list_url_name = "cases:basis_list"
+
+
+class BasisToggleView(RefToggleView):
+    model = CaseBasis
+    list_url_name = "cases:basis_list"
+
+
+class BasisImportView(RefImportView):
+    model = CaseBasis
+    list_url_name = "cases:basis_list"
+    has_legal_ref = True
+
+
+# ── CaseCategory ──────────────────────────────────────────────────────────────
+
+class CategoryListView(RefListView):
+    model = CaseCategory
+    template_name = "cases/references/category_list.html"
+    ref_title = "Категории дел"
+    create_url_name = "cases:category_create"
+    update_url_name = "cases:category_update"
+    toggle_url_name = "cases:category_toggle"
+    import_url_name = "cases:category_import"
+
+
+class CategoryCreateView(RefCreateView):
+    model = CaseCategory
+    fields = ["code", "name", "is_active"]
+    ref_title = "Категории дел"
+    list_url_name = "cases:category_list"
+
+
+class CategoryUpdateView(RefUpdateView):
+    model = CaseCategory
+    fields = ["code", "name", "is_active"]
+    ref_title = "Категории дел"
+    list_url_name = "cases:category_list"
+
+
+class CategoryToggleView(RefToggleView):
+    model = CaseCategory
+    list_url_name = "cases:category_list"
+
+
+class CategoryImportView(RefImportView):
+    model = CaseCategory
+    list_url_name = "cases:category_list"
+
+
+# ── Position ──────────────────────────────────────────────────────────────────
+
+class PositionListView(RefListView):
+    model = Position
+    template_name = "cases/references/position_list.html"
+    ref_title = "Должности"
+    create_url_name = "cases:position_create"
+    update_url_name = "cases:position_update"
+    toggle_url_name = "cases:position_toggle"
+    import_url_name = "cases:position_import"
+
+
+class PositionCreateView(RefCreateView):
+    model = Position
+    fields = ["name", "is_active"]
+    ref_title = "Должности"
+    list_url_name = "cases:position_list"
+
+
+class PositionUpdateView(RefUpdateView):
+    model = Position
+    fields = ["name", "is_active"]
+    ref_title = "Должности"
+    list_url_name = "cases:position_list"
+
+
+class PositionToggleView(RefToggleView):
+    model = Position
+    list_url_name = "cases:position_list"
+
+
+class PositionImportView(RefImportView):
+    model = Position
+    list_url_name = "cases:position_list"
+    has_code = False

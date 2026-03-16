@@ -1,5 +1,8 @@
 from django.contrib import admin
-from .models import Department, StagnationSettings, Taxpayer, AdministrativeCase, CaseEvent
+from .models import (
+    Department, StagnationSettings, Taxpayer, AdministrativeCase, CaseEvent,
+    Region, CaseCategory, CaseBasis, Position,
+)
 
 
 @admin.register(Department)
@@ -38,6 +41,34 @@ class AdministrativeCaseAdmin(admin.ModelAdmin):
     ordering = ("-created_at",)
     raw_id_fields = ("taxpayer", "responsible_user", "created_by")
     readonly_fields = ("case_number", "created_at", "updated_at")
+
+
+@admin.register(Region)
+class RegionAdmin(admin.ModelAdmin):
+    list_display = ["code", "name", "is_active"]
+    search_fields = ["code", "name"]
+    list_filter = ["is_active"]
+
+
+@admin.register(CaseCategory)
+class CaseCategoryAdmin(admin.ModelAdmin):
+    list_display = ["code", "name", "is_active"]
+    search_fields = ["code", "name"]
+    list_filter = ["is_active"]
+
+
+@admin.register(CaseBasis)
+class CaseBasisAdmin(admin.ModelAdmin):
+    list_display = ["code", "name", "legal_ref", "is_active"]
+    search_fields = ["code", "name"]
+    list_filter = ["is_active"]
+
+
+@admin.register(Position)
+class PositionAdmin(admin.ModelAdmin):
+    list_display = ["name", "is_active"]
+    search_fields = ["name"]
+    list_filter = ["is_active"]
 
 
 @admin.register(CaseEvent)

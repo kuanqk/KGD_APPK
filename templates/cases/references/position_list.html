@@ -1,0 +1,13 @@
+{% extends "cases/references/ref_list.html" %}
+
+{% block table_headers %}
+<th>Наименование</th>
+{% endblock %}
+
+{% block table_row scoped %}
+<td>{{ obj.name }}</td>
+{% endblock %}
+
+{% block import_columns %}
+Колонки: <strong>Наименование</strong> (без кода)
+{% endblock %}

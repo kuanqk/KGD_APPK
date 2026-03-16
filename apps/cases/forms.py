@@ -1,6 +1,6 @@
 from django import forms
 from apps.accounts.models import User
-from .models import AdministrativeCase, Department, Taxpayer, CaseBasis, TaxpayerType
+from .models import AdministrativeCase, Department, Taxpayer, TaxpayerType, Region, CaseBasis, CaseCategory
 from .validators import KZValidator, IIN_BIN_ERRORS, PHONE_ERRORS
 
 
@@ -41,14 +41,27 @@ class CaseCreateForm(forms.Form):
     taxpayer_email = forms.EmailField(required=False, label="Email НП")
 
     # Данные дела
-    region = forms.CharField(max_length=100, label="Регион")
+    region = forms.ModelChoiceField(
+        queryset=Region.objects.filter(is_active=True),
+        label="Регион",
+        empty_label="— выберите регион —",
+    )
     department = forms.ModelChoiceField(
         queryset=Department.objects.all(),
         label="Подразделение",
         empty_label="— выберите подразделение —",
     )
-    basis = forms.ChoiceField(choices=CaseBasis.choices, label="Основание")
-    category = forms.CharField(max_length=200, required=False, label="Категория")
+    basis = forms.ModelChoiceField(
+        queryset=CaseBasis.objects.filter(is_active=True),
+        label="Основание",
+        empty_label="— выберите основание —",
+    )
+    category = forms.ModelChoiceField(
+        queryset=CaseCategory.objects.filter(is_active=True),
+        required=False,
+        label="Категория",
+        empty_label="— не указана —",
+    )
     description = forms.CharField(
         required=False,
         label="Описание",

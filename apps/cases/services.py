@@ -57,10 +57,10 @@ def generate_case_number(department=None) -> str:
 def create_case(
     operator,
     taxpayer_data: dict,
-    region: str,
-    basis: str,
-    department: str = "",
-    category: str = "",
+    region=None,
+    basis=None,
+    department=None,
+    category=None,
     description: str = "",
     responsible_user=None,
 ) -> AdministrativeCase:
@@ -389,7 +389,7 @@ def get_dashboard_data(user) -> dict:
         }
 
     # ── observer ───────────────────────────────────────────────────────────────
-    region_qs = AdministrativeCase.objects.filter(region=user.region)
+    region_qs = AdministrativeCase.objects.filter(region__name=user.region)
     from django.db.models import Count as _Count
     raw_counts = region_qs.values("status").annotate(count=_Count("id"))
     status_counts = {row["status"]: row["count"] for row in raw_counts}

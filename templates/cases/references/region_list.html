@@ -1,0 +1,12 @@
+{% extends "cases/references/ref_list.html" %}
+{% load static %}
+
+{% block table_headers %}
+<th>Код</th>
+<th>Наименование</th>
+{% endblock %}
+
+{% block table_row scoped %}
+<td class="font-monospace small">{{ obj.code }}</td>
+<td>{{ obj.name }}</td>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Справочники — АППК{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <h4 class="mb-0"><i class="bi bi-journals"></i> Справочники</h4>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title"><i class="bi bi-geo-alt"></i> Регионы</h6>
+                <p class="card-text text-muted small">Регионы Казахстана для привязки дел и пользователей.</p>
+                <div class="fs-4 fw-bold text-primary mb-2">{{ counts.region }}</div>
+            </div>
+            <div class="card-footer d-flex gap-2">
+                <a href="{% url 'cases:region_list' %}" class="btn btn-sm btn-primary">Открыть</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title"><i class="bi bi-file-text"></i> Основания</h6>
+                <p class="card-text text-muted small">Основания возбуждения административных дел.</p>
+                <div class="fs-4 fw-bold text-primary mb-2">{{ counts.basis }}</div>
+            </div>
+            <div class="card-footer d-flex gap-2">
+                <a href="{% url 'cases:basis_list' %}" class="btn btn-sm btn-primary">Открыть</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title"><i class="bi bi-tag"></i> Категории</h6>
+                <p class="card-text text-muted small">Категории налоговых нарушений (НДС, КПН и др.).</p>
+                <div class="fs-4 fw-bold text-primary mb-2">{{ counts.category }}</div>
+            </div>
+            <div class="card-footer d-flex gap-2">
+                <a href="{% url 'cases:category_list' %}" class="btn btn-sm btn-primary">Открыть</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title"><i class="bi bi-person-badge"></i> Должности</h6>
+                <p class="card-text text-muted small">Должности сотрудников для профилей пользователей.</p>
+                <div class="fs-4 fw-bold text-primary mb-2">{{ counts.position }}</div>
+            </div>
+            <div class="card-footer d-flex gap-2">
+                <a href="{% url 'cases:position_list' %}" class="btn btn-sm btn-primary">Открыть</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

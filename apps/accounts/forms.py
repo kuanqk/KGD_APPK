@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.password_validation import validate_password
-from apps.cases.models import Department
+from apps.cases.models import Department, Position
 from .models import User, UserRole
 
 
@@ -12,6 +12,13 @@ class UserCreateForm(forms.ModelForm):
     password2 = forms.CharField(
         label="Подтверждение пароля",
         widget=forms.PasswordInput(attrs={"class": "form-control"}),
+    )
+    position = forms.ModelChoiceField(
+        queryset=Position.objects.filter(is_active=True),
+        required=False,
+        label="Должность",
+        empty_label="— не указана —",
+        widget=forms.Select(attrs={"class": "form-select"}),
     )
 
     class Meta:
@@ -25,7 +32,6 @@ class UserCreateForm(forms.ModelForm):
             "role": forms.Select(attrs={"class": "form-select"}),
             "region": forms.TextInput(attrs={"class": "form-control"}),
             "phone": forms.TextInput(attrs={"class": "form-control"}),
-            "position": forms.TextInput(attrs={"class": "form-control"}),
         }
 
     def clean_password2(self):
@@ -52,6 +58,13 @@ class UserUpdateForm(forms.ModelForm):
         empty_label="— не указано —",
         widget=forms.Select(attrs={"class": "form-select"}),
     )
+    position = forms.ModelChoiceField(
+        queryset=Position.objects.filter(is_active=True),
+        required=False,
+        label="Должность",
+        empty_label="— не указана —",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
 
     class Meta:
         model = User
@@ -63,6 +76,5 @@ class UserUpdateForm(forms.ModelForm):
             "role": forms.Select(attrs={"class": "form-select"}),
             "region": forms.TextInput(attrs={"class": "form-control"}),
             "phone": forms.TextInput(attrs={"class": "form-control"}),
-            "position": forms.TextInput(attrs={"class": "form-control"}),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }

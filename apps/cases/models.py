@@ -52,13 +52,6 @@ class CaseStatus(models.TextChoices):
     ARCHIVED = "archived", "Архив"
 
 
-class CaseBasis(models.TextChoices):
-    TAX_VIOLATION = "tax_violation", "Налоговое нарушение"
-    DECLARATION_ERROR = "declaration_error", "Ошибка в декларации"
-    UNREPORTED_INCOME = "unreported_income", "Незадекларированный доход"
-    OTHER = "other", "Иное"
-
-
 class CaseEventType(models.TextChoices):
     CREATED = "created", "Дело создано"
     STATUS_CHANGED = "status_changed", "Смена статуса"
@@ -113,7 +106,7 @@ class CaseQuerySet(models.QuerySet):
         if user.department_id:
             return self.filter(department=user.department)
         if user.region:
-            return self.filter(region=user.region)
+            return self.filter(region__name=user.region)
         return self.none()
 
 
@@ -137,7 +130,15 @@ class AdministrativeCase(models.Model):
         related_name="cases",
         verbose_name="Налогоплательщик",
     )
-    region = models.CharField(max_length=100, verbose_name="Регион", db_index=True)
+    region = models.ForeignKey(
+        "Region",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cases",
+        verbose_name="Регион",
+        db_index=True,
+    )
     department = models.ForeignKey(
         Department,
         on_delete=models.SET_NULL,
@@ -161,13 +162,22 @@ class AdministrativeCase(models.Model):
         related_name="created_cases",
         verbose_name="Создал",
     )
-    basis = models.CharField(
-        max_length=30,
-        choices=CaseBasis.choices,
-        default=CaseBasis.OTHER,
+    basis = models.ForeignKey(
+        "CaseBasis",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cases",
         verbose_name="Основание",
     )
-    category = models.CharField(max_length=200, blank=True, verbose_name="Категория")
+    category = models.ForeignKey(
+        "CaseCategory",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="cases",
+        verbose_name="Категория",
+    )
     description = models.TextField(blank=True, verbose_name="Описание")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания", db_index=True)
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
@@ -247,6 +257,62 @@ class CaseEvent(models.Model):
 
     def __str__(self):
         return f"{self.case.case_number} | {self.get_event_type_display()} | {self.created_at:%d.%m.%Y %H:%M}"
+
+
+class Region(models.Model):
+    code = models.CharField(max_length=10, unique=True, verbose_name="Код")
+    name = models.CharField(max_length=200, verbose_name="Наименование")
+    is_active = models.BooleanField(default=True, verbose_name="Активен", db_index=True)
+
+    class Meta:
+        verbose_name = "Регион"
+        verbose_name_plural = "Регионы"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class CaseCategory(models.Model):
+    code = models.CharField(max_length=20, unique=True, verbose_name="Код")
+    name = models.CharField(max_length=200, verbose_name="Наименование")
+    is_active = models.BooleanField(default=True, verbose_name="Активна", db_index=True)
+
+    class Meta:
+        verbose_name = "Категория дела"
+        verbose_name_plural = "Категории дел"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class CaseBasis(models.Model):
+    code = models.CharField(max_length=20, unique=True, verbose_name="Код")
+    name = models.CharField(max_length=200, verbose_name="Наименование")
+    legal_ref = models.TextField(blank=True, verbose_name="Ссылка на НПА")
+    is_active = models.BooleanField(default=True, verbose_name="Активно", db_index=True)
+
+    class Meta:
+        verbose_name = "Основание дела"
+        verbose_name_plural = "Основания дел"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class Position(models.Model):
+    name = models.CharField(max_length=200, unique=True, verbose_name="Наименование")
+    is_active = models.BooleanField(default=True, verbose_name="Активна", db_index=True)
+
+    class Meta:
+        verbose_name = "Должность"
+        verbose_name_plural = "Должности"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
 
 
 class StagnationSettings(models.Model):

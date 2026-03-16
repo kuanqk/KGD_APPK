@@ -1,0 +1,17 @@
+{% extends "cases/references/ref_list.html" %}
+
+{% block table_headers %}
+<th>Код</th>
+<th>Наименование</th>
+<th>Ссылка на НПА</th>
+{% endblock %}
+
+{% block table_row scoped %}
+<td class="font-monospace small">{{ obj.code }}</td>
+<td>{{ obj.name }}</td>
+<td class="small text-muted">{{ obj.legal_ref|default:"—" }}</td>
+{% endblock %}
+
+{% block import_columns %}
+Колонки: <strong>Код | Наименование | Ссылка на НПА</strong>
+{% endblock %}
