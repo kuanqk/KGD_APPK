@@ -79,9 +79,17 @@
                 <div class="card-body">
 
                     <div class="mb-3">
-                        <label class="form-label fw-semibold small">Регион <span class="text-danger">*</span></label>
-                        <input type="text" name="region" value="{{ form.region.value|default:'' }}"
-                               class="form-control form-control-sm{% if form.region.errors %} is-invalid{% endif %}">
+                        <label class="form-label fw-semibold small">{{ form.region.label }} <span class="text-danger">*</span></label>
+                        <select name="{{ form.region.html_name }}"
+                                class="form-select form-select-sm{% if form.region.errors %} is-invalid{% endif %}">
+                            <option value="">— выберите регион —</option>
+                            {% for region in form.fields.region.queryset %}
+                            <option value="{{ region.pk }}"
+                                {% if form.region.value == region.pk|stringformat:'s' or form.region.value == region.pk %}selected{% endif %}>
+                                {{ region.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
                         {% for error in form.region.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                     </div>
 
@@ -115,9 +123,18 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-semibold small">Категория</label>
-                        <input type="text" name="category" value="{{ form.category.value|default:'' }}"
-                               class="form-control form-control-sm">
+                        <label class="form-label fw-semibold small">{{ form.category.label }}</label>
+                        <select name="{{ form.category.html_name }}"
+                                class="form-select form-select-sm{% if form.category.errors %} is-invalid{% endif %}">
+                            <option value="">— не указана —</option>
+                            {% for cat in form.fields.category.queryset %}
+                            <option value="{{ cat.pk }}"
+                                {% if form.category.value == cat.pk|stringformat:'s' or form.category.value == cat.pk %}selected{% endif %}>
+                                {{ cat.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% for error in form.category.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                     </div>
 
                     <div class="mb-3">
