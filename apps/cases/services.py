@@ -12,25 +12,45 @@ from .models import AdministrativeCase, CaseEvent, CaseEventType, CaseStatus, De
 logger = logging.getLogger(__name__)
 
 
-def generate_case_number() -> str:
-    """Генерирует номер дела формата АД-ГГГГ-NNNNN."""
-    year = date.today().year
-    prefix = f"АД-{year}-"
-    last = (
-        AdministrativeCase.objects
-        .filter(case_number__startswith=prefix)
-        .order_by("-case_number")
-        .values_list("case_number", flat=True)
-        .first()
-    )
-    if last:
+def generate_case_number(department=None) -> str:
+    """
+    Генерирует номер дела формата АД-{КОД}-{YYYYMMDD}-{NNNNNNN}.
+    Если офис не указан — fallback на старый формат АД-ГГГГ-NNNNN.
+    """
+    from django.db import transaction as db_transaction
+
+    today = date.today()
+    year = today.year
+
+    if department is None:
+        prefix = f"АД-{year}-"
+        last = (
+            AdministrativeCase.objects
+            .filter(case_number__startswith=prefix)
+            .order_by("-case_number")
+            .values_list("case_number", flat=True)
+            .first()
+        )
         try:
-            seq = int(last.split("-")[-1]) + 1
+            seq = int(last.split("-")[-1]) + 1 if last else 1
         except (ValueError, IndexError):
             seq = 1
-    else:
-        seq = 1
-    return f"{prefix}{seq:05d}"
+        return f"{prefix}{seq:05d}"
+
+    dept_code = str(department.code).zfill(2)
+    date_str = today.strftime("%Y%m%d")
+
+    with db_transaction.atomic():
+        dept_obj = Department.objects.select_for_update().get(pk=department.pk)
+        if dept_obj.case_seq_year != year:
+            dept_obj.case_seq_year = year
+            dept_obj.case_sequence = 1
+        else:
+            dept_obj.case_sequence += 1
+        dept_obj.save(update_fields=["case_sequence", "case_seq_year"])
+        seq = dept_obj.case_sequence
+
+    return f"АД-{dept_code}-{date_str}-{seq:07d}"
 
 
 @transaction.atomic
@@ -57,7 +77,7 @@ def create_case(
     )
 
     case = AdministrativeCase.objects.create(
-        case_number=generate_case_number(),
+        case_number=generate_case_number(department),
         taxpayer=taxpayer,
         region=region,
         department=department,  # FK: Department instance or None

@@ -13,7 +13,9 @@ class Department(models.Model):
         verbose_name="Код офиса (01-20)",
     )
     doc_sequence = models.PositiveIntegerField(default=0, verbose_name="Счётчик документов")
-    seq_year = models.IntegerField(default=0, verbose_name="Год счётчика")
+    seq_year = models.IntegerField(default=0, verbose_name="Год счётчика документов")
+    case_sequence = models.PositiveIntegerField(default=0, verbose_name="Счётчик дел")
+    case_seq_year = models.IntegerField(default=0, verbose_name="Год счётчика дел")
 
     class Meta:
         verbose_name = "Подразделение"
