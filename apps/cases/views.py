@@ -12,7 +12,7 @@ from django.views.generic import ListView, DetailView, FormView
 from .forms import CaseCreateForm, CaseFilterForm, TaxpayerImportForm
 from .models import AdministrativeCase, StagnationSettings, Taxpayer, TaxpayerType
 from .services import create_case, allow_backdating
-from .validators import validate_iin_bin
+from .validators import KZValidator, IIN_BIN_ERRORS
 
 logger = logging.getLogger(__name__)
 
@@ -345,21 +345,17 @@ def taxpayer_import_template(request):
 class ValidateIinView(LoginRequiredMixin, View):
     """POST cases/validate-iin/ — валидирует ИИН/БИН, возвращает JSON."""
 
-    _ERROR_MESSAGES = {
-        "invalid_format": "ИИН/БИН должен содержать 12 цифр.",
-        "invalid_checksum": "Неверная контрольная сумма ИИН/БИН.",
-        "invalid_birthdate": "Некорректная дата рождения в ИИН.",
-        "invalid_registration_date": "Некорректная дата регистрации в БИН.",
-        "unknown_type": "Не удалось определить тип ИИН/БИН.",
-    }
-
     def post(self, request):
         from django.http import JsonResponse
         iin_bin = request.POST.get("iin_bin", "").strip()
-        valid, result = validate_iin_bin(iin_bin)
-        if valid:
-            return JsonResponse({"valid": True, "type": result})
+        result = KZValidator.validate_iin_bin(iin_bin)
+        if result.valid:
+            return JsonResponse({
+                "valid": True,
+                "type": result.type,
+                "metadata": result.metadata,
+            })
         return JsonResponse({
             "valid": False,
-            "error": self._ERROR_MESSAGES.get(result, "Неверный ИИН/БИН."),
+            "error": IIN_BIN_ERRORS.get(result.error, "Неверный ИИН/БИН."),
         })

@@ -1,7 +1,7 @@
 from django import forms
 from apps.accounts.models import User
 from .models import AdministrativeCase, Department, Taxpayer, CaseBasis, TaxpayerType
-from .validators import validate_iin_bin
+from .validators import KZValidator, IIN_BIN_ERRORS, PHONE_ERRORS
 
 
 class TaxpayerForm(forms.ModelForm):
@@ -61,30 +61,33 @@ class CaseCreateForm(forms.Form):
         empty_label="— не назначен —",
     )
 
-    _IIN_BIN_ERRORS = {
-        "invalid_format": "ИИН/БИН должен содержать 12 цифр.",
-        "invalid_checksum": "Неверная контрольная сумма ИИН/БИН.",
-        "invalid_birthdate": "Некорректная дата рождения в ИИН.",
-        "invalid_registration_date": "Некорректная дата регистрации в БИН.",
-        "unknown_type": "Не удалось определить тип ИИН/БИН.",
-    }
-
     def clean_iin_bin(self):
         value = self.cleaned_data["iin_bin"].strip()
-        valid, result = validate_iin_bin(value)
-        if not valid:
+        result = KZValidator.validate_iin_bin(value)
+        if not result.valid:
             raise forms.ValidationError(
-                self._IIN_BIN_ERRORS.get(result, "Неверный ИИН/БИН.")
+                IIN_BIN_ERRORS.get(result.error, "Неверный ИИН/БИН.")
             )
-        # Сохраняем определённый тип для использования в clean()
-        self._iin_bin_type = result
+        self._iin_bin_result = result
         return value
+
+    def clean_taxpayer_phone(self):
+        value = self.cleaned_data.get("taxpayer_phone", "").strip()
+        if not value:
+            return value
+        result = KZValidator.validate_phone(value)
+        if not result.valid:
+            raise forms.ValidationError(
+                PHONE_ERRORS.get(result.error, "Неверный номер телефона.")
+            )
+        return result.value  # нормализованный +7XXXXXXXXXX
 
     def clean(self):
         cleaned = super().clean()
-        # Автоматически устанавливаем тип НП по результату валидации ИИН/БИН
-        if hasattr(self, "_iin_bin_type"):
-            cleaned["taxpayer_type"] = "individual" if self._iin_bin_type == "IIN" else "legal"
+        if hasattr(self, "_iin_bin_result"):
+            cleaned["taxpayer_type"] = (
+                "individual" if self._iin_bin_result.type == "IIN" else "legal"
+            )
         return cleaned
 
 

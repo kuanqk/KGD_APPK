@@ -25,6 +25,7 @@
                                class="form-control form-control-sm{% if form.iin_bin.errors %} is-invalid{% endif %}"
                                maxlength="12" autocomplete="off">
                         <div id="iin_bin_feedback" class="form-text"></div>
+                        <div id="iin_bin_metadata" class="form-text text-muted small"></div>
                         {% for error in form.iin_bin.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
                     </div>
                     <div class="mb-3">
@@ -157,6 +158,7 @@
     const validateUrl = '{% url "cases:validate_iin" %}';
     const csrfToken = '{{ csrf_token }}';
 
+    const metaBox = document.getElementById('iin_bin_metadata');
     const TYPE_MAP = { 'IIN': 'individual', 'BIN': 'legal' };
     const TYPE_LABEL = { 'IIN': '✅ ИИН (физическое лицо)', 'BIN': '✅ БИН (юридическое лицо / ИП)' };
 
@@ -169,11 +171,23 @@
         }
     }
 
+    function renderMetadata(type, metadata) {
+        if (!metadata) { metaBox.textContent = ''; return; }
+        if (type === 'IIN' && metadata.birthdate) {
+            metaBox.textContent = 'Дата рождения: ' + metadata.birthdate + ' · Пол: ' + (metadata.gender || '—');
+        } else if (type === 'BIN' && metadata.registration_date) {
+            metaBox.textContent = 'Дата регистрации: ' + metadata.registration_date;
+        } else {
+            metaBox.textContent = '';
+        }
+    }
+
     function validate(value) {
         clearTimeout(debounceTimer);
         if (value.length < 12) {
             feedback.textContent = '';
             feedback.className = 'form-text';
+            metaBox.textContent = '';
             return;
         }
         debounceTimer = setTimeout(function () {
@@ -190,17 +204,20 @@
                     feedback.textContent = TYPE_LABEL[json.type] || '✅ Верно';
                     feedback.className = 'form-text text-success fw-semibold';
                     setType(TYPE_MAP[json.type] || 'legal');
+                    renderMetadata(json.type, json.metadata);
                     iinInput.classList.remove('is-invalid');
                     iinInput.classList.add('is-valid');
                 } else {
                     feedback.textContent = '❌ ' + json.error;
                     feedback.className = 'form-text text-danger';
+                    metaBox.textContent = '';
                     iinInput.classList.remove('is-valid');
                     iinInput.classList.add('is-invalid');
                 }
             })
             .catch(function () {
                 feedback.textContent = '';
+                metaBox.textContent = '';
             });
         }, 400);
     }
