@@ -119,7 +119,7 @@ class CaseQuerySet(models.QuerySet):
 
 class AdministrativeCase(models.Model):
     case_number = models.CharField(
-        max_length=20,
+        max_length=30,
         unique=True,
         verbose_name="Номер дела",
         db_index=True,
