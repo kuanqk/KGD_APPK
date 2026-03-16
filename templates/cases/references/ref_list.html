@@ -51,7 +51,7 @@
             <tbody>
                 {% for obj in object_list %}
                 <tr class="{% if not obj.is_active %}table-secondary{% endif %}">
-                    {% block table_row scoped %}
+                    {% block table_row %}
                     <td class="font-monospace small">{{ obj.code }}</td>
                     <td>{{ obj.name }}</td>
                     {% endblock %}
