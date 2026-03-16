@@ -12,7 +12,7 @@ from django.views.generic import ListView, DetailView, FormView
 from .forms import CaseCreateForm, CaseFilterForm, TaxpayerImportForm
 from .models import AdministrativeCase, StagnationSettings, Taxpayer, TaxpayerType
 from .services import create_case, allow_backdating
-from .validators import KZValidator, IIN_BIN_ERRORS
+from .validators import KZValidator, IIN_BIN_ERRORS, PHONE_ERRORS
 
 logger = logging.getLogger(__name__)
 
@@ -340,6 +340,26 @@ def taxpayer_import_template(request):
     )
     response["Content-Disposition"] = 'attachment; filename="taxpayer_import_template.xlsx"'
     return response
+
+
+class ValidatePhoneView(LoginRequiredMixin, View):
+    """POST cases/validate-phone/ — валидирует телефон, возвращает JSON."""
+
+    def post(self, request):
+        from django.http import JsonResponse
+        phone = request.POST.get("phone", "").strip()
+        result = KZValidator.validate_phone(phone)
+        if result.valid:
+            return JsonResponse({
+                "valid": True,
+                "value": result.value,
+                "type": result.type,
+                "metadata": result.metadata,
+            })
+        return JsonResponse({
+            "valid": False,
+            "error": PHONE_ERRORS.get(result.error, "Неверный номер телефона."),
+        })
 
 
 class ValidateIinView(LoginRequiredMixin, View):

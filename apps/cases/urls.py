@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     CaseListView, CaseDetailView, CaseCreateView,
     AllowBackdatingView, TaxpayerImportView, taxpayer_import_template,
-    ValidateIinView,
+    ValidateIinView, ValidatePhoneView,
 )
 
 app_name = "cases"
@@ -15,4 +15,5 @@ urlpatterns = [
     path("taxpayers/import/", TaxpayerImportView.as_view(), name="taxpayer_import"),
     path("taxpayers/import/template/", taxpayer_import_template, name="taxpayer_import_template"),
     path("validate-iin/", ValidateIinView.as_view(), name="validate_iin"),
+    path("validate-phone/", ValidatePhoneView.as_view(), name="validate_phone"),
 ]

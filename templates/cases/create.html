@@ -55,15 +55,18 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold small">{{ form.taxpayer_phone.label }}</label>
-                        <input type="text" name="{{ form.taxpayer_phone.html_name }}" value="{{ form.taxpayer_phone.value|default:'' }}"
-                               class="form-control form-control-sm{% if form.taxpayer_phone.errors %} is-invalid{% endif %}">
-                        {% for error in form.taxpayer_phone.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                        <input type="text" id="id_taxpayer_phone" name="{{ form.taxpayer_phone.html_name }}" value="{{ form.taxpayer_phone.value|default:'' }}"
+                               class="form-control form-control-sm{% if form.taxpayer_phone.errors %} is-invalid{% endif %}"
+                               placeholder="+7XXXXXXXXXX">
+                        <div id="phone_feedback" class="form-text"></div>
+                        {% for error in form.taxpayer_phone.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold small">{{ form.taxpayer_email.label }}</label>
-                        <input type="email" name="{{ form.taxpayer_email.html_name }}" value="{{ form.taxpayer_email.value|default:'' }}"
+                        <input type="email" id="id_taxpayer_email" name="{{ form.taxpayer_email.html_name }}" value="{{ form.taxpayer_email.value|default:'' }}"
                                class="form-control form-control-sm{% if form.taxpayer_email.errors %} is-invalid{% endif %}">
-                        {% for error in form.taxpayer_email.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                        <div id="email_feedback" class="form-text"></div>
+                        {% for error in form.taxpayer_email.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
                     </div>
                 </div>
             </div>
@@ -229,6 +232,89 @@
     if (iinInput.value.length === 12) {
         validate(iinInput.value.trim());
     }
+})();
+
+// ── Валидация телефона ────────────────────────────────────────────────────────
+(function () {
+    const phoneInput = document.getElementById('id_taxpayer_phone');
+    const phoneFeedback = document.getElementById('phone_feedback');
+    const validatePhoneUrl = '{% url "cases:validate_phone" %}';
+    const csrfToken = '{{ csrf_token }}';
+    const TYPE_LABEL = { 'mobile': '✅ Мобильный', 'landline': '✅ Городской' };
+
+    let timer = null;
+
+    function validatePhone(value) {
+        clearTimeout(timer);
+        if (!value) {
+            phoneFeedback.textContent = '';
+            phoneFeedback.className = 'form-text';
+            phoneInput.classList.remove('is-valid', 'is-invalid');
+            return;
+        }
+        timer = setTimeout(function () {
+            const data = new FormData();
+            data.append('phone', value);
+            fetch(validatePhoneUrl, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+                body: data,
+            })
+            .then(r => r.json())
+            .then(json => {
+                if (json.valid) {
+                    phoneFeedback.textContent = TYPE_LABEL[json.type] || '✅ Номер корректен';
+                    phoneFeedback.className = 'form-text text-success fw-semibold';
+                    phoneInput.classList.remove('is-invalid');
+                    phoneInput.classList.add('is-valid');
+                } else {
+                    phoneFeedback.textContent = '❌ ' + json.error;
+                    phoneFeedback.className = 'form-text text-danger';
+                    phoneInput.classList.remove('is-valid');
+                    phoneInput.classList.add('is-invalid');
+                }
+            })
+            .catch(function () { phoneFeedback.textContent = ''; });
+        }, 400);
+    }
+
+    phoneInput.addEventListener('input', function () { validatePhone(this.value.trim()); });
+    if (phoneInput.value) { validatePhone(phoneInput.value.trim()); }
+})();
+
+// ── Валидация email (regex, без AJAX) ────────────────────────────────────────
+(function () {
+    const emailInput = document.getElementById('id_taxpayer_email');
+    const emailFeedback = document.getElementById('email_feedback');
+    const EMAIL_REGEX = /^[\w.\-]+@[\w.\-]+\.\w+$/;
+
+    let timer = null;
+
+    function validateEmail(value) {
+        clearTimeout(timer);
+        if (!value) {
+            emailFeedback.textContent = '';
+            emailFeedback.className = 'form-text';
+            emailInput.classList.remove('is-valid', 'is-invalid');
+            return;
+        }
+        timer = setTimeout(function () {
+            if (EMAIL_REGEX.test(value)) {
+                emailFeedback.textContent = '✅ Email корректен';
+                emailFeedback.className = 'form-text text-success fw-semibold';
+                emailInput.classList.remove('is-invalid');
+                emailInput.classList.add('is-valid');
+            } else {
+                emailFeedback.textContent = '❌ Неверный формат email';
+                emailFeedback.className = 'form-text text-danger';
+                emailInput.classList.remove('is-valid');
+                emailInput.classList.add('is-invalid');
+            }
+        }, 400);
+    }
+
+    emailInput.addEventListener('input', function () { validateEmail(this.value.trim()); });
+    if (emailInput.value) { validateEmail(emailInput.value.trim()); }
 })();
 </script>
 {% endblock %}
