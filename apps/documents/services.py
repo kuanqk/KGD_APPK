@@ -78,8 +78,8 @@ def get_document_context(case) -> dict:
     responsible = case.responsible_user
     return {
         "case_number": case.case_number,
-        "case_basis": case.get_basis_display(),
-        "case_region": case.region,
+        "case_basis": case.basis.name if case.basis else "",
+        "case_region": case.region.name if case.region else "",
         "case_department": str(case.department) if case.department else "",
         "case_status": case.get_status_display(),
         "taxpayer_name": case.taxpayer.name,
@@ -91,7 +91,7 @@ def get_document_context(case) -> dict:
         "date_today": today.strftime("%d.%m.%Y"),
         "date_today_full": _format_date_full(today),
         "responsible_name": responsible.get_full_name() if responsible else "",
-        "responsible_position": responsible.position if responsible else "",
+        "responsible_position": responsible.position.name if (responsible and responsible.position) else "",
     }
 
 
