@@ -74,8 +74,10 @@ def generate_doc_number(doc_type: str, case=None) -> str:
 
 def get_document_context(case) -> dict:
     """Формирует контекст подстановки для шаблона документа."""
+    from apps.cases.models import TaxAuthorityDetails
     today = date.today()
     responsible = case.responsible_user
+    details = TaxAuthorityDetails.get_singleton()
     return {
         "case_number": case.case_number,
         "case_basis": case.basis.name if case.basis else "",
@@ -92,6 +94,9 @@ def get_document_context(case) -> dict:
         "date_today_full": _format_date_full(today),
         "responsible_name": responsible.get_full_name() if responsible else "",
         "responsible_position": responsible.position.name if (responsible and responsible.position) else "",
+        "authority_name": details.name,
+        "authority_address": details.address,
+        "deputy_name": details.deputy_name,
     }
 
 

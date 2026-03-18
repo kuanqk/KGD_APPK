@@ -1,6 +1,6 @@
 from django import forms
 from apps.accounts.models import User
-from .models import AdministrativeCase, Department, Taxpayer, TaxpayerType, Region, CaseBasis, CaseCategory
+from .models import AdministrativeCase, Department, Taxpayer, TaxpayerType, Region, CaseBasis, CaseCategory, TaxAuthorityDetails
 from .validators import KZValidator, IIN_BIN_ERRORS, PHONE_ERRORS
 
 
@@ -102,6 +102,17 @@ class CaseCreateForm(forms.Form):
                 "individual" if self._iin_bin_result.type == "IIN" else "legal"
             )
         return cleaned
+
+
+class TaxAuthorityDetailsForm(forms.ModelForm):
+    class Meta:
+        model = TaxAuthorityDetails
+        fields = ["name", "address", "deputy_name"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "address": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "deputy_name": forms.TextInput(attrs={"class": "form-control"}),
+        }
 
 
 class TaxpayerImportForm(forms.Form):

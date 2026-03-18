@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Department, StagnationSettings, Taxpayer, AdministrativeCase, CaseEvent,
-    Region, CaseCategory, CaseBasis, Position,
+    Region, CaseCategory, CaseBasis, Position, TaxAuthorityDetails,
 )
 
 
@@ -69,6 +69,18 @@ class PositionAdmin(admin.ModelAdmin):
     list_display = ["name", "is_active"]
     search_fields = ["name"]
     list_filter = ["is_active"]
+
+
+@admin.register(TaxAuthorityDetails)
+class TaxAuthorityDetailsAdmin(admin.ModelAdmin):
+    list_display = ["name", "deputy_name", "updated_at", "updated_by"]
+    readonly_fields = ["updated_at", "updated_by"]
+
+    def has_add_permission(self, request):
+        return not TaxAuthorityDetails.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(CaseEvent)

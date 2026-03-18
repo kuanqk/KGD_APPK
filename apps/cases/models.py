@@ -337,3 +337,29 @@ class StagnationSettings(models.Model):
     def get(cls) -> "StagnationSettings":
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
+
+
+class TaxAuthorityDetails(models.Model):
+    """Singleton — реквизиты административного органа (КГД) для подстановки в документы."""
+    name = models.CharField(max_length=500, verbose_name="Наименование административного органа")
+    address = models.TextField(verbose_name="Адрес")
+    deputy_name = models.CharField(max_length=300, verbose_name="ФИО заместителя")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Последнее обновление")
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        verbose_name="Кто изменил",
+    )
+
+    class Meta:
+        verbose_name = "Реквизиты КГД"
+        verbose_name_plural = "Реквизиты КГД"
+
+    def __str__(self):
+        return self.name or "Реквизиты КГД"
+
+    @classmethod
+    def get_singleton(cls) -> "TaxAuthorityDetails":
+        obj, _ = cls.objects.get_or_create(pk=1, defaults={"name": "", "address": "", "deputy_name": ""})
+        return obj

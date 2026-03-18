@@ -9,6 +9,7 @@ from .views import (
     CategoryListView, CategoryCreateView, CategoryUpdateView, CategoryToggleView, CategoryImportView,
     PositionListView, PositionCreateView, PositionUpdateView, PositionToggleView, PositionImportView,
     DepartmentListView, DepartmentCreateView, DepartmentUpdateView,
+    TaxAuthorityDetailsView,
 )
 
 app_name = "cases"
@@ -52,4 +53,6 @@ urlpatterns = [
     path("references/departments/", DepartmentListView.as_view(), name="department_list"),
     path("references/departments/create/", DepartmentCreateView.as_view(), name="department_create"),
     path("references/departments/<int:pk>/edit/", DepartmentUpdateView.as_view(), name="department_update"),
+
+    path("references/tax-authority/", TaxAuthorityDetailsView.as_view(), name="tax_authority"),
 ]

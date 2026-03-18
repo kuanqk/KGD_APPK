@@ -11,8 +11,8 @@ from django.views import View
 from django.views.generic import ListView, DetailView, FormView
 
 from django.views.generic.edit import CreateView, UpdateView
-from .forms import CaseCreateForm, CaseFilterForm, TaxpayerImportForm
-from .models import AdministrativeCase, Department, StagnationSettings, Taxpayer, TaxpayerType, Region, CaseBasis, CaseCategory, Position
+from .forms import CaseCreateForm, CaseFilterForm, TaxpayerImportForm, TaxAuthorityDetailsForm
+from .models import AdministrativeCase, Department, StagnationSettings, Taxpayer, TaxpayerType, Region, CaseBasis, CaseCategory, Position, TaxAuthorityDetails
 from .services import create_case, allow_backdating
 from .validators import KZValidator, IIN_BIN_ERRORS, PHONE_ERRORS
 
@@ -732,3 +732,34 @@ class DepartmentUpdateView(ReferenceAdminMixin, UpdateView):
         ctx["list_url_name"] = "cases:department_list"
         ctx["action"] = "Редактировать"
         return ctx
+
+
+# ── Реквизиты КГД ─────────────────────────────────────────────────────────────
+
+class TaxAuthorityDetailsView(ReferenceAdminMixin, View):
+    template_name = "cases/references/tax_authority.html"
+
+    def get(self, request):
+        from django.shortcuts import render
+        details = TaxAuthorityDetails.get_singleton()
+        form = TaxAuthorityDetailsForm(instance=details)
+        return render(request, self.template_name, {"form": form, "details": details})
+
+    def post(self, request):
+        from django.shortcuts import render, redirect
+        from apps.audit.services import audit_log
+        details = TaxAuthorityDetails.get_singleton()
+        form = TaxAuthorityDetailsForm(request.POST, instance=details)
+        if form.is_valid():
+            obj = form.save(commit=False)
+            obj.updated_by = request.user
+            obj.save()
+            audit_log(
+                user=request.user,
+                action="tax_authority_updated",
+                entity_type="tax_authority_details",
+                entity_id=obj.pk,
+                details={"name": obj.name},
+            )
+            return redirect("cases:tax_authority")
+        return render(request, self.template_name, {"form": form, "details": details})
