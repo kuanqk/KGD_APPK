@@ -1,4 +1,4 @@
-.PHONY: up down build migrate makemigrations test shell createsuperuser logs collectstatic
+.PHONY: up down build migrate makemigrations test shell createsuperuser logs collectstatic deploy maintenance-on maintenance-off
 
 # Запуск всех сервисов
 up:
@@ -51,3 +51,14 @@ logs-worker:
 # Собрать статику
 collectstatic:
 	docker compose exec web python manage.py collectstatic --noinput
+
+# Деплой на сервер
+deploy:
+	@ssh root@91.243.71.139 'cd /opt/KGD_APPK && git pull && docker compose restart web'
+
+# Режим обслуживания
+maintenance-on:
+	@ssh root@91.243.71.139 'bash /opt/KGD_APPK/docker/maintenance-on.sh'
+
+maintenance-off:
+	@ssh root@91.243.71.139 'bash /opt/KGD_APPK/docker/maintenance-off.sh'
