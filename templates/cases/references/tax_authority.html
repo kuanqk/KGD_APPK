@@ -63,9 +63,11 @@
                     Эти данные автоматически подставляются в генерируемые документы:
                 </p>
                 <ul class="small text-muted mb-3">
-                    <li><code>{{ "{{" }} authority_name {{ "}}" }}</code> — наименование органа</li>
-                    <li><code>{{ "{{" }} authority_address {{ "}}" }}</code> — адрес</li>
-                    <li><code>{{ "{{" }} deputy_name {{ "}}" }}</code> — ФИО заместителя</li>
+                    {% verbatim %}
+                    <li><code>{{ authority_name }}</code> — наименование органа</li>
+                    <li><code>{{ authority_address }}</code> — адрес</li>
+                    <li><code>{{ deputy_name }}</code> — ФИО заместителя</li>
+                    {% endverbatim %}
                 </ul>
                 {% if details.updated_at and details.name %}
                 <hr class="my-2">
