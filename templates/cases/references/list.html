@@ -56,5 +56,17 @@
             </div>
         </div>
     </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title"><i class="bi bi-building"></i> Подразделения</h6>
+                <p class="card-text text-muted small">Офисы и подразделения КГД.</p>
+                <div class="fs-4 fw-bold text-primary mb-2">{{ counts.department }}</div>
+            </div>
+            <div class="card-footer d-flex gap-2">
+                <a href="{% url 'cases:department_list' %}" class="btn btn-sm btn-primary">Открыть</a>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

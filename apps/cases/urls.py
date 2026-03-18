@@ -8,6 +8,7 @@ from .views import (
     BasisListView, BasisCreateView, BasisUpdateView, BasisToggleView, BasisImportView,
     CategoryListView, CategoryCreateView, CategoryUpdateView, CategoryToggleView, CategoryImportView,
     PositionListView, PositionCreateView, PositionUpdateView, PositionToggleView, PositionImportView,
+    DepartmentListView, DepartmentCreateView, DepartmentUpdateView,
 )
 
 app_name = "cases"
@@ -47,4 +48,8 @@ urlpatterns = [
     path("references/positions/<int:pk>/edit/", PositionUpdateView.as_view(), name="position_update"),
     path("references/positions/<int:pk>/toggle/", PositionToggleView.as_view(), name="position_toggle"),
     path("references/positions/import/", PositionImportView.as_view(), name="position_import"),
+
+    path("references/departments/", DepartmentListView.as_view(), name="department_list"),
+    path("references/departments/create/", DepartmentCreateView.as_view(), name="department_create"),
+    path("references/departments/<int:pk>/edit/", DepartmentUpdateView.as_view(), name="department_update"),
 ]

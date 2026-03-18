@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Подразделения — АППК{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <a href="{% url 'cases:references' %}" class="text-decoration-none text-muted small">
+            <i class="bi bi-arrow-left"></i> Справочники
+        </a>
+        <h4 class="mb-0 mt-1"><i class="bi bi-building"></i> Подразделения</h4>
+    </div>
+    <a href="{% url 'cases:department_create' %}" class="btn btn-sm btn-primary">
+        <i class="bi bi-plus-lg"></i> Добавить
+    </a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm"
+                       placeholder="Поиск по наименованию...">
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i></button>
+                <a href="." class="btn btn-sm btn-outline-secondary ms-1">Сбросить</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Код</th>
+                    <th>Наименование</th>
+                    <th>Счётчик дел</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for obj in object_list %}
+                <tr>
+                    <td class="font-monospace small">{{ obj.code }}</td>
+                    <td>{{ obj.name }}</td>
+                    <td class="text-muted small">{{ obj.case_sequence }}</td>
+                    <td>
+                        <a href="{% url 'cases:department_update' pk=obj.pk %}"
+                           class="btn btn-sm btn-outline-secondary py-0">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-muted p-3">Записей не найдено.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if is_paginated %}
+        <div class="p-3 border-top">
+            <nav><ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}">‹</a></li>
+                {% endif %}
+                <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}">›</a></li>
+                {% endif %}
+            </ul></nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -400,6 +400,7 @@ class ReferenceIndexView(ReferenceAdminMixin, View):
                 "basis": CaseBasis.objects.count(),
                 "category": CaseCategory.objects.count(),
                 "position": Position.objects.count(),
+                "department": Department.objects.count(),
             }
         })
 
@@ -682,3 +683,49 @@ class PositionImportView(RefImportView):
     model = Position
     list_url_name = "cases:position_list"
     has_code = False
+
+
+# ── Department ────────────────────────────────────────────────────────────────
+
+class DepartmentListView(ReferenceAdminMixin, ListView):
+    model = Department
+    template_name = "cases/references/department_list.html"
+    paginate_by = 50
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        q = self.request.GET.get("q", "").strip()
+        if q:
+            qs = qs.filter(name__icontains=q)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["q"] = self.request.GET.get("q", "")
+        return ctx
+
+
+class DepartmentCreateView(ReferenceAdminMixin, CreateView):
+    model = Department
+    fields = ["code", "name"]
+    template_name = "cases/references/ref_form.html"
+    success_url = "/cases/references/departments/"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["ref_title"] = "Подразделения"
+        ctx["list_url"] = "cases:department_list"
+        return ctx
+
+
+class DepartmentUpdateView(ReferenceAdminMixin, UpdateView):
+    model = Department
+    fields = ["code", "name"]
+    template_name = "cases/references/ref_form.html"
+    success_url = "/cases/references/departments/"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["ref_title"] = "Подразделения"
+        ctx["list_url"] = "cases:department_list"
+        return ctx
