@@ -11,7 +11,7 @@ from django.views.generic import ListView, DetailView, FormView
 
 from django.views.generic.edit import CreateView, UpdateView
 from .forms import CaseCreateForm, CaseFilterForm, TaxpayerImportForm
-from .models import AdministrativeCase, StagnationSettings, Taxpayer, TaxpayerType, Region, CaseBasis, CaseCategory, Position
+from .models import AdministrativeCase, Department, StagnationSettings, Taxpayer, TaxpayerType, Region, CaseBasis, CaseCategory, Position
 from .services import create_case, allow_backdating
 from .validators import KZValidator, IIN_BIN_ERRORS, PHONE_ERRORS
 
