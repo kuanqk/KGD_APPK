@@ -13,6 +13,13 @@ class UserCreateForm(forms.ModelForm):
         label="Подтверждение пароля",
         widget=forms.PasswordInput(attrs={"class": "form-control"}),
     )
+    department = forms.ModelChoiceField(
+        queryset=Department.objects.all(),
+        required=False,
+        label="Подразделение",
+        empty_label="— не указано —",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
     position = forms.ModelChoiceField(
         queryset=Position.objects.filter(is_active=True),
         required=False,
@@ -23,7 +30,7 @@ class UserCreateForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ["username", "first_name", "last_name", "email", "role", "region", "phone", "position"]
+        fields = ["username", "first_name", "last_name", "email", "role", "region", "phone", "position", "department"]
         widgets = {
             "username": forms.TextInput(attrs={"class": "form-control"}),
             "first_name": forms.TextInput(attrs={"class": "form-control"}),
