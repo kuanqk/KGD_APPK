@@ -6,6 +6,7 @@ from django.db.models import DurationField, ExpressionWrapper, F, Q
 from django.db.models.functions import Now
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import ListView, DetailView, FormView
 
@@ -709,12 +710,13 @@ class DepartmentCreateView(ReferenceAdminMixin, CreateView):
     model = Department
     fields = ["code", "name"]
     template_name = "cases/references/ref_form.html"
-    success_url = "/cases/references/departments/"
+    success_url = reverse_lazy("cases:department_list")
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["ref_title"] = "Подразделения"
-        ctx["list_url"] = "cases:department_list"
+        ctx["list_url_name"] = "cases:department_list"
+        ctx["action"] = "Создать"
         return ctx
 
 
@@ -722,10 +724,11 @@ class DepartmentUpdateView(ReferenceAdminMixin, UpdateView):
     model = Department
     fields = ["code", "name"]
     template_name = "cases/references/ref_form.html"
-    success_url = "/cases/references/departments/"
+    success_url = reverse_lazy("cases:department_list")
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["ref_title"] = "Подразделения"
-        ctx["list_url"] = "cases:department_list"
+        ctx["list_url_name"] = "cases:department_list"
+        ctx["action"] = "Редактировать"
         return ctx
