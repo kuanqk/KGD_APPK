@@ -128,6 +128,11 @@ def generate_notice(case, hearing_date, hearing_time, hearing_address: str, user
 
     context = get_document_context(case)
     context["authority_name"] = context.get("authority_name") or "______"
+    responsible = case.responsible_user
+    context["responsible_name"] = (
+        (responsible.get_full_name() or responsible.username) if responsible else "______"
+    )
+    context["responsible_phone"] = responsible.phone if responsible else "______"
     context.update({
         "hearing_date": _format_hearing_date(hearing_date),
         "hearing_time": hearing_time.strftime("%H:%M"),
