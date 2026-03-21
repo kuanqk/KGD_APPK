@@ -127,6 +127,7 @@ def generate_notice(case, hearing_date, hearing_time, hearing_address: str, user
         raise ValueError("Активный шаблон «Извещение о явке» не найден.")
 
     context = get_document_context(case)
+    context["authority_name"] = context.get("authority_name") or "______"
     context.update({
         "hearing_date": _format_hearing_date(hearing_date),
         "hearing_time": hearing_time.strftime("%H:%M"),
