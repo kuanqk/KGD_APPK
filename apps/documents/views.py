@@ -8,9 +8,10 @@ from django.views.generic import DetailView, FormView
 
 from apps.cases.models import AdministrativeCase, CaseStatus
 from apps.cases.services import after_return_actions
-from .forms import DocumentCreateForm
+from django.views import View
+from .forms import DocumentCreateForm, NoticeForm
 from .models import CaseDocument, DocumentStatus, DocumentType
-from .services import create_new_version, generate_document
+from .services import create_new_version, generate_document, generate_notice
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,8 @@ class DocumentCreateView(LoginRequiredMixin, FormView):
 
     def form_valid(self, form):
         doc_type = form.cleaned_data["doc_type"]
+        if doc_type == DocumentType.NOTICE:
+            return redirect("documents:notice_form", case_pk=self.case.pk)
         try:
             doc = generate_document(self.case, doc_type, self.request.user)
             messages.success(self.request, f"Документ {doc.doc_number} успешно сформирован.")
@@ -177,6 +180,59 @@ class DerRequestCreateView(LoginRequiredMixin, FormView):
         except ValueError as e:
             messages.error(self.request, str(e))
             return self.form_invalid(form)
+
+
+class NoticeFormView(LoginRequiredMixin, View):
+    """Интерактивная форма заполнения Извещения о явке."""
+    template_name = "documents/notice_form.html"
+
+    def _get_case(self, request, case_pk):
+        return get_object_or_404(
+            AdministrativeCase.objects.for_user(request.user),
+            pk=case_pk,
+        )
+
+    def _build_context(self, case, form):
+        from apps.cases.models import TaxAuthorityDetails
+        details = TaxAuthorityDetails.get_singleton()
+        responsible = case.responsible_user
+        return {
+            "case": case,
+            "form": form,
+            "auto_fields": {
+                "Наименование органа": details.name or "—",
+                "Налогоплательщик": f"{case.taxpayer.name} (БИН/ИИН: {case.taxpayer.iin_bin})",
+                "Контактное лицо": responsible.get_full_name() if responsible else "—",
+                "Телефон": responsible.phone if responsible else "—",
+            },
+        }
+
+    def get(self, request, case_pk):
+        from django.shortcuts import render
+        from apps.cases.models import TaxAuthorityDetails
+        case = self._get_case(request, case_pk)
+        details = TaxAuthorityDetails.get_singleton()
+        form = NoticeForm(initial={"hearing_address": details.address})
+        return render(request, self.template_name, self._build_context(case, form))
+
+    def post(self, request, case_pk):
+        from django.shortcuts import render
+        case = self._get_case(request, case_pk)
+        form = NoticeForm(request.POST)
+        if form.is_valid():
+            try:
+                doc = generate_notice(
+                    case=case,
+                    hearing_date=form.cleaned_data["hearing_date"],
+                    hearing_time=form.cleaned_data["hearing_time"],
+                    hearing_address=form.cleaned_data["hearing_address"],
+                    user=request.user,
+                )
+                messages.success(request, f"Извещение {doc.doc_number} успешно сформировано.")
+                return redirect("documents:detail", pk=doc.pk)
+            except ValueError as e:
+                messages.error(request, str(e))
+        return render(request, self.template_name, self._build_context(case, form))
 
 
 def document_download(request, pk):

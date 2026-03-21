@@ -94,6 +94,8 @@ def get_document_context(case) -> dict:
         "date_today_full": _format_date_full(today),
         "responsible_name": responsible.get_full_name() if responsible else "",
         "responsible_position": responsible.position.name if (responsible and responsible.position) else "",
+        "responsible_phone": responsible.phone if responsible else "",
+        "taxpayer_iin_bin": case.taxpayer.iin_bin,
         "authority_name": details.name,
         "authority_address": details.address,
         "deputy_name": details.deputy_name,
@@ -106,6 +108,75 @@ def _format_date_full(d: date) -> str:
         "июля", "августа", "сентября", "октября", "ноября", "декабря",
     ]
     return f"{d.day} {months[d.month]} {d.year} года"
+
+
+def _format_hearing_date(d: date) -> str:
+    months = [
+        "", "января", "февраля", "марта", "апреля", "мая", "июня",
+        "июля", "августа", "сентября", "октября", "ноября", "декабря",
+    ]
+    return f"«{d.day:02d}» {months[d.month]} {d.year}"
+
+
+@transaction.atomic
+def generate_notice(case, hearing_date, hearing_time, hearing_address: str, user) -> CaseDocument:
+    """Генерирует Извещение о явке с указанными датой/временем/адресом заслушивания."""
+    doc_type = DocumentType.NOTICE
+    template = DocumentTemplate.objects.filter(doc_type=doc_type, is_active=True).first()
+    if not template:
+        raise ValueError("Активный шаблон «Извещение о явке» не найден.")
+
+    context = get_document_context(case)
+    context.update({
+        "hearing_date": _format_hearing_date(hearing_date),
+        "hearing_time": hearing_time.strftime("%H:%M"),
+        "hearing_address": hearing_address,
+    })
+    context["doc_type_display"] = dict(DocumentType.choices).get(doc_type, doc_type)
+
+    rendered_body = _render_template_body(template.body_template, context)
+
+    from django.template.loader import render_to_string
+    html_content = render_to_string(
+        "documents/pdf/base.html",
+        {"body": rendered_body, "context": context, "doc_type_display": context["doc_type_display"]},
+    )
+
+    pdf_bytes = _render_pdf(html_content)
+    doc_number = generate_doc_number(doc_type, case)
+    file_path = _save_pdf_file(doc_number, pdf_bytes)
+
+    existing_count = CaseDocument.objects.filter(case=case, doc_type=doc_type).count()
+    doc = CaseDocument.objects.create(
+        case=case,
+        template=template,
+        doc_type=doc_type,
+        doc_number=doc_number,
+        version=existing_count + 1,
+        status=DocumentStatus.GENERATED,
+        file_path=file_path,
+        created_by=user,
+        metadata={
+            "template_version": template.version,
+            "context_snapshot": {k: v for k, v in context.items()},
+        },
+    )
+
+    audit_log(
+        user=user,
+        action="notice_generated",
+        entity_type="document",
+        entity_id=doc.id,
+        details={
+            "doc_number": doc_number,
+            "case_number": case.case_number,
+            "hearing_date": str(hearing_date),
+            "hearing_address": hearing_address,
+        },
+    )
+
+    logger.info("Notice generated: %s for case %s by %s", doc_number, case.case_number, user)
+    return doc
 
 
 def _render_template_body(body_template: str, context: dict) -> str:
