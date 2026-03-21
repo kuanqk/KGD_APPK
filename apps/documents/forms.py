@@ -2,22 +2,6 @@ from django import forms
 from .models import DocumentType, DocumentTemplate
 
 
-class NoticeForm(forms.Form):
-    hearing_date = forms.DateField(
-        label="Дата заслушивания",
-        widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}),
-    )
-    hearing_time = forms.TimeField(
-        label="Время",
-        widget=forms.TimeInput(attrs={"type": "time", "class": "form-control"}),
-    )
-    hearing_address = forms.CharField(
-        max_length=500,
-        label="Адрес проведения",
-        widget=forms.TextInput(attrs={"class": "form-control"}),
-    )
-
-
 class DocumentCreateForm(forms.Form):
     doc_type = forms.ChoiceField(
         choices=DocumentType.choices,

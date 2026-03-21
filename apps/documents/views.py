@@ -8,9 +8,9 @@ from django.views.generic import DetailView, FormView
 
 from apps.cases.models import AdministrativeCase, CaseStatus
 from apps.cases.services import after_return_actions
-from .forms import DocumentCreateForm, NoticeForm
+from .forms import DocumentCreateForm
 from .models import CaseDocument, DocumentStatus, DocumentType
-from .services import create_new_version, generate_document, generate_notice
+from .services import create_new_version, generate_document
 
 logger = logging.getLogger(__name__)
 
@@ -174,58 +174,6 @@ class DerRequestCreateView(LoginRequiredMixin, FormView):
             after_return_actions(self.case, DocumentType.DER_REQUEST, self.request.user)
             messages.success(self.request, f"Запрос в ДЭР {doc.doc_number} успешно создан.")
             return redirect("cases:detail", pk=self.case.pk)
-        except ValueError as e:
-            messages.error(self.request, str(e))
-            return self.form_invalid(form)
-
-
-class NoticeCreateView(LoginRequiredMixin, FormView):
-    """Интерактивная форма создания Извещения о явке."""
-    template_name = "documents/notice_create.html"
-    form_class = NoticeForm
-
-    def dispatch(self, request, *args, **kwargs):
-        if request.user.role not in ("admin", "operator"):
-            messages.error(request, "У вас нет прав для создания документов.")
-            return redirect("cases:list")
-        self.case = get_object_or_404(
-            AdministrativeCase.objects.for_user(request.user),
-            pk=kwargs["case_pk"],
-        )
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_context_data(self, **kwargs):
-        from apps.cases.models import TaxAuthorityDetails
-        context = super().get_context_data(**kwargs)
-        details = TaxAuthorityDetails.get_singleton()
-        context["case"] = self.case
-        context["authority_name"] = details.name
-        context["authority_address"] = details.address
-        context["deputy_name"] = details.deputy_name
-        # Автополя
-        responsible = self.case.responsible_user
-        context["auto_fields"] = {
-            "Наименование органа": details.name or "—",
-            "Налогоплательщик": f"{self.case.taxpayer.name} ({self.case.taxpayer.iin_bin})",
-            "Ответственный": responsible.get_full_name() if responsible else "—",
-            "Телефон": responsible.phone if responsible else "—",
-        }
-        # Подсказка для поля адреса
-        if not context["form"].initial.get("hearing_address") and details.address:
-            context["form"].fields["hearing_address"].widget.attrs["placeholder"] = details.address
-        return context
-
-    def form_valid(self, form):
-        try:
-            doc = generate_notice(
-                case=self.case,
-                hearing_date=form.cleaned_data["hearing_date"],
-                hearing_time=form.cleaned_data["hearing_time"],
-                hearing_address=form.cleaned_data["hearing_address"],
-                user=self.request.user,
-            )
-            messages.success(self.request, f"Извещение {doc.doc_number} успешно сформировано.")
-            return redirect("documents:detail", pk=doc.pk)
         except ValueError as e:
             messages.error(self.request, str(e))
             return self.form_invalid(form)
