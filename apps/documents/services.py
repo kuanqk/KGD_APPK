@@ -185,6 +185,81 @@ def generate_notice(case, hearing_date, hearing_time, hearing_address: str, user
     return doc
 
 
+@transaction.atomic
+def generate_preliminary_decision(case, form_data: dict, user) -> CaseDocument:
+    """Генерирует Предварительное решение с рисками."""
+    from .forms import PRELIMINARY_DECISION_RISKS
+
+    doc_type = DocumentType.PRELIMINARY_DECISION
+    template = DocumentTemplate.objects.filter(doc_type=doc_type, is_active=True).first()
+    if not template:
+        raise ValueError("Активный шаблон «Предварительное решение» не найден.")
+
+    context = get_document_context(case)
+
+    period_from = form_data["period_from"]
+    period_to = form_data["period_to"]
+
+    risk_items = []
+    for key, label in PRELIMINARY_DECISION_RISKS:
+        if form_data.get(f"risk_{key}"):
+            comment = (form_data.get(f"risk_{key}_comment") or "").strip()
+            risk_items.append({"label": label, "comment": comment})
+
+    context.update({
+        "outgoing_number": form_data["outgoing_number"],
+        "period_from": period_from.strftime("%d.%m.%Y"),
+        "period_to": period_to.strftime("%d.%m.%Y"),
+        "risk_items": risk_items,
+        "doc_type_display": dict(DocumentType.choices).get(doc_type, doc_type),
+    })
+
+    rendered_body = _render_template_body(template.body_template, context)
+
+    from django.template.loader import render_to_string
+    html_content = render_to_string(
+        "documents/pdf/base.html",
+        {"body": rendered_body, "context": context, "doc_type_display": context["doc_type_display"]},
+    )
+
+    pdf_bytes = _render_pdf(html_content)
+    doc_number = generate_doc_number(doc_type, case)
+    file_path = _save_pdf_file(doc_number, pdf_bytes)
+
+    existing_count = CaseDocument.objects.filter(case=case, doc_type=doc_type).count()
+    doc = CaseDocument.objects.create(
+        case=case,
+        template=template,
+        doc_type=doc_type,
+        doc_number=doc_number,
+        version=existing_count + 1,
+        status=DocumentStatus.GENERATED,
+        file_path=file_path,
+        created_by=user,
+        metadata={
+            "template_version": template.version,
+            "risk_items": risk_items,
+            "outgoing_number": form_data["outgoing_number"],
+        },
+    )
+
+    audit_log(
+        user=user,
+        action="preliminary_decision_generated",
+        entity_type="document",
+        entity_id=doc.id,
+        details={
+            "doc_number": doc_number,
+            "case_number": case.case_number,
+            "outgoing_number": form_data["outgoing_number"],
+            "risks_count": len(risk_items),
+        },
+    )
+
+    logger.info("PreliminaryDecision generated: %s for case %s by %s", doc_number, case.case_number, user)
+    return doc
+
+
 def _render_template_body(body_template: str, context: dict) -> str:
     """Рендерит строку шаблона через Django Template engine."""
     t = Template(body_template)

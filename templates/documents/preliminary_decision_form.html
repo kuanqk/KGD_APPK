@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+
+{% block title %}Предварительное решение — {{ case.case_number }} — АППК{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'cases:detail' pk=case.pk %}" class="text-decoration-none text-muted small">
+        <i class="bi bi-arrow-left"></i> Дело {{ case.case_number }}
+    </a>
+    <h4 class="mb-0 mt-1"><i class="bi bi-file-earmark-text"></i> Предварительное решение</h4>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    {{ msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="row g-4"
+     id="pd-root"
+     data-authority-name="{{ authority_name }}"
+     data-deputy-name="{{ deputy_name }}"
+     data-taxpayer="{{ case.taxpayer.name }} ({{ case.taxpayer.iin_bin }})"
+     data-case-number="{{ case.case_number }}">
+
+    {# ── Левая колонка ───────────────────────────────────────────────── #}
+    <div class="col-md-6">
+
+        {# Блок 1: Данные из системы #}
+        <div class="card mb-3 border-0 bg-light">
+            <div class="card-header bg-secondary bg-opacity-10 fw-semibold small border-0">
+                <i class="bi bi-database"></i> Данные из системы
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    {% for label, value in auto_fields.items %}
+                    <tr>
+                        <td class="text-muted small ps-3" style="width:38%">{{ label }}</td>
+                        <td class="small fw-semibold pe-3">{{ value }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+
+        {# Блок 2: Форма #}
+        <div class="card">
+            <div class="card-header fw-semibold small">
+                <i class="bi bi-pencil-square"></i> Заполните поля
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    {# Реквизиты #}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">
+                            {{ form.outgoing_number.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.outgoing_number }}
+                        {% if form.outgoing_number.errors %}
+                        <div class="text-danger small mt-1">{{ form.outgoing_number.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">
+                                {{ form.period_from.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.period_from }}
+                            {% if form.period_from.errors %}
+                            <div class="text-danger small mt-1">{{ form.period_from.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">
+                                {{ form.period_to.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.period_to }}
+                            {% if form.period_to.errors %}
+                            <div class="text-danger small mt-1">{{ form.period_to.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {# Риски #}
+                    <div class="fw-semibold small mb-2">
+                        <i class="bi bi-exclamation-triangle"></i> Риски
+                        <span class="text-danger">*</span>
+                        <span class="text-muted fw-normal">(отметьте хотя бы один)</span>
+                    </div>
+
+                    {% for rf in risk_fields %}
+                    <div class="mb-2 border rounded p-2" id="risk-block-{{ rf.key }}">
+                        <div class="form-check">
+                            {{ rf.checkbox }}
+                            <label class="form-check-label small" for="{{ rf.checkbox.id_for_label }}">
+                                {{ rf.label }}
+                            </label>
+                        </div>
+                        <div class="mt-1 ps-4 risk-comment-wrap" id="comment-wrap-{{ rf.key }}" style="display:none">
+                            {{ rf.comment }}
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-file-earmark-pdf"></i> Сформировать PDF
+                        </button>
+                        <a href="{% url 'cases:detail' pk=case.pk %}" class="btn btn-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+    {# ── Правая колонка: предпросмотр ────────────────────────────────── #}
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header fw-semibold small">
+                <i class="bi bi-eye"></i> Предпросмотр документа
+                <div class="mt-1 fw-normal">
+                    <small>
+                        <span style="background:#FFF59D;padding:2px 6px">Авто</span> — из системы&nbsp;&nbsp;
+                        <span style="background:#CCFF90;padding:2px 6px">Вручную</span> — вы заполняете
+                    </small>
+                </div>
+            </div>
+            <div class="card-body" style="padding:16px;">
+                <div id="preview-content"
+                     style="font-size:13px; line-height:1.8; font-family: serif;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const root         = document.getElementById('pd-root');
+    const authorityName = root.dataset.authorityName || '[____]';
+    const deputyName   = root.dataset.deputyName    || '[____]';
+    const taxpayer     = root.dataset.taxpayer      || '[____]';
+    const caseNumber   = root.dataset.caseNumber    || '[____]';
+
+    const outgoingInput  = document.getElementById('id_outgoing_number');
+    const periodFromInput = document.getElementById('id_period_from');
+    const periodToInput   = document.getElementById('id_period_to');
+    const preview        = document.getElementById('preview-content');
+
+    const riskData = [
+        {% for rf in risk_fields %}
+        { checkId: '{{ rf.checkbox.id_for_label }}', label: '{{ rf.label|escapejs }}', commentId: '{{ rf.comment.id_for_label }}' },
+        {% endfor %}
+    ];
+
+    function todayFormatted() {
+        const now = new Date();
+        const d = String(now.getDate()).padStart(2, '0');
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const y = now.getFullYear();
+        return d + '.' + m + '.' + y;
+    }
+
+    function formatDate(val) {
+        if (!val) return '[____]';
+        const parts = val.split('-');
+        if (parts.length !== 3) return val;
+        return parts[2] + '.' + parts[1] + '.' + parts[0];
+    }
+
+    function a(text) {
+        return '<span style="background:#FFF59D;padding:0 2px">' + (text || '[____]') + '</span>';
+    }
+
+    function m(text) {
+        return '<span style="background:#CCFF90;padding:0 2px">' + (text || '[____]') + '</span>';
+    }
+
+    function escHtml(str) {
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function render() {
+        const outgoing   = (outgoingInput.value || '').trim();
+        const periodFrom = formatDate(periodFromInput.value);
+        const periodTo   = formatDate(periodToInput.value);
+
+        // Collect checked risks
+        const checkedRisks = [];
+        riskData.forEach(function(r) {
+            const cb = document.getElementById(r.checkId);
+            if (cb && cb.checked) {
+                const commentEl = document.getElementById(r.commentId);
+                const comment = commentEl ? (commentEl.value || '').trim() : '';
+                checkedRisks.push({ label: r.label, comment: comment });
+            }
+        });
+
+        let risksHtml = '';
+        if (checkedRisks.length === 0) {
+            risksHtml = '<p style="color:#999">[Выберите хотя бы один риск]</p>';
+        } else {
+            checkedRisks.forEach(function(r, i) {
+                risksHtml += '<p>' + (i + 1) + '. ' + m(escHtml(r.label));
+                if (r.comment) risksHtml += ': <em>' + m(escHtml(r.comment)) + '</em>';
+                risksHtml += '.</p>';
+            });
+        }
+
+        preview.innerHTML =
+            '<h4 style="text-align:center;font-weight:bold;margin-bottom:16px;">ПРЕДВАРИТЕЛЬНОЕ РЕШЕНИЕ</h4>' +
+            '<p><strong>Исходящий №:</strong> ' + m(outgoing) + ' от ' + a(todayFormatted()) + ' г.</p>' +
+            '<p>' +
+            a(authorityName) +
+            ' в рамках административного производства по делу <strong>№ ' + a(caseNumber) + '</strong>' +
+            ' в отношении налогоплательщика <strong>' + a(taxpayer) + '</strong>,' +
+            ' по результатам анализа финансово-хозяйственной деятельности' +
+            ' за период с <strong>' + m(periodFrom) + '</strong> по <strong>' + m(periodTo) + '</strong>,' +
+            ' в соответствии со статьями 70–73 АППК РК выносит:' +
+            '</p>' +
+            '<p>По результатам предварительного изучения деятельности налогоплательщика' +
+            ' установлены следующие риски, являющиеся основаниями для инициирования' +
+            ' внеплановой тематической налоговой проверки:</p>' +
+            risksHtml +
+            '<p>На основании выявленных рисков предварительно принимается решение об' +
+            ' инициировании внеплановой тематической налоговой проверки.</p>' +
+            '<p>Согласно пункту 3 статьи 73 АППК РК, Вы вправе предоставить возражение к' +
+            ' предварительному решению в срок не позднее двух рабочих дней со дня его получения.</p>' +
+            '<br>' +
+            '<p>Главный исполнитель</p>' +
+            '<p><strong>' + a(deputyName) + '</strong></p>' +
+            '<p>________________</p>' +
+            '<p>(подпись)</p>' +
+            '<br>' +
+            '<p>\u0433. \u0410\u0441\u0442\u0430\u043d\u0430, ' + todayFormatted() + '</p>';
+    }
+
+    // Show/hide comment area when checkbox toggled
+    riskData.forEach(function(r) {
+        const cb = document.getElementById(r.checkId);
+        if (!cb) return;
+        const wrap = cb.closest('.border.rounded.p-2').querySelector('.risk-comment-wrap');
+        function syncWrap() {
+            if (wrap) wrap.style.display = cb.checked ? 'block' : 'none';
+        }
+        // Show if already checked (form re-render after error)
+        syncWrap();
+        cb.addEventListener('change', function() { syncWrap(); render(); });
+        const commentEl = document.getElementById(r.commentId);
+        if (commentEl) commentEl.addEventListener('input', render);
+    });
+
+    outgoingInput.addEventListener('input', render);
+    periodFromInput.addEventListener('change', render);
+    periodToInput.addEventListener('change', render);
+    render();
+})();
+</script>
+{% endblock %}
