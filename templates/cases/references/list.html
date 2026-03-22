@@ -73,9 +73,10 @@
             <div class="card-body">
                 <h6 class="card-title"><i class="bi bi-bank"></i> Реквизиты КГД</h6>
                 <p class="card-text text-muted small">Наименование органа, адрес и подписант для документов.</p>
+                <div class="fs-4 fw-bold text-primary mb-2">{{ counts.tax_authority }}</div>
             </div>
             <div class="card-footer d-flex gap-2">
-                <a href="{% url 'cases:tax_authority' %}" class="btn btn-sm btn-primary">Открыть</a>
+                <a href="{% url 'cases:tax_authority_list' %}" class="btn btn-sm btn-primary">Открыть</a>
             </div>
         </div>
     </div>

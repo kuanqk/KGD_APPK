@@ -195,16 +195,16 @@ class NoticeFormView(LoginRequiredMixin, View):
         )
 
     def _build_context(self, case, form):
-        from apps.cases.models import TaxAuthorityDetails
-        details = TaxAuthorityDetails.get_singleton()
+        from apps.documents.services import _get_authority_details
+        details = _get_authority_details(case)
         responsible = case.responsible_user
         return {
             "case": case,
             "form": form,
-            "authority_name": details.name or "",
-            "deputy_name": details.deputy_name or "",
+            "authority_name": details.name if details else "",
+            "deputy_name": details.deputy_name if details else "",
             "auto_fields": {
-                "Наименование органа": details.name or "—",
+                "Наименование органа": (details.name if details else "") or "—",
                 "Налогоплательщик": f"{case.taxpayer.name} (БИН/ИИН: {case.taxpayer.iin_bin})",
                 "Контактное лицо": responsible.get_full_name() if responsible else "—",
                 "Телефон": responsible.phone if responsible else "—",
@@ -213,10 +213,10 @@ class NoticeFormView(LoginRequiredMixin, View):
 
     def get(self, request, case_pk):
         from django.shortcuts import render
-        from apps.cases.models import TaxAuthorityDetails
+        from apps.documents.services import _get_authority_details
         case = self._get_case(request, case_pk)
-        details = TaxAuthorityDetails.get_singleton()
-        form = NoticeForm(initial={"hearing_address": details.address})
+        details = _get_authority_details(case)
+        form = NoticeForm(initial={"hearing_address": details.address if details else ""})
         return render(request, self.template_name, self._build_context(case, form))
 
     def post(self, request, case_pk):
@@ -250,8 +250,8 @@ class PreliminaryDecisionFormView(LoginRequiredMixin, View):
         )
 
     def _build_context(self, case, form):
-        from apps.cases.models import TaxAuthorityDetails
-        details = TaxAuthorityDetails.get_singleton()
+        from apps.documents.services import _get_authority_details
+        details = _get_authority_details(case)
         responsible = case.responsible_user
         risk_fields = [
             {
@@ -266,11 +266,11 @@ class PreliminaryDecisionFormView(LoginRequiredMixin, View):
             "case": case,
             "form": form,
             "risk_fields": risk_fields,
-            "authority_name": details.name or "",
-            "deputy_name": details.deputy_name or "",
-            "deputy_position": details.deputy_position or "",
+            "authority_name": details.name if details else "",
+            "deputy_name": details.deputy_name if details else "",
+            "deputy_position": details.deputy_position if details else "",
             "auto_fields": {
-                "Наименование органа": details.name or "—",
+                "Наименование органа": (details.name if details else "") or "—",
                 "Налогоплательщик": f"{case.taxpayer.name} (БИН/ИИН: {case.taxpayer.iin_bin})",
                 "Номер дела": case.case_number,
                 "Контактное лицо": responsible.get_full_name() if responsible else "—",

@@ -73,14 +73,11 @@ class PositionAdmin(admin.ModelAdmin):
 
 @admin.register(TaxAuthorityDetails)
 class TaxAuthorityDetailsAdmin(admin.ModelAdmin):
-    list_display = ["name", "deputy_name", "updated_at", "updated_by"]
+    list_display = ["name", "department", "city", "deputy_name", "is_active", "updated_at", "updated_by"]
+    list_filter = ["is_active"]
+    search_fields = ["name", "bin_number", "deputy_name"]
     readonly_fields = ["updated_at", "updated_by"]
-
-    def has_add_permission(self, request):
-        return not TaxAuthorityDetails.objects.exists()
-
-    def has_delete_permission(self, request, obj=None):
-        return False
+    raw_id_fields = ["department"]
 
 
 @admin.register(CaseEvent)

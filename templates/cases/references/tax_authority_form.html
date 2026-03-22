@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}{{ action }} реквизиты КГД — АППК{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'cases:tax_authority_list' %}" class="text-decoration-none text-muted small">
+        <i class="bi bi-arrow-left"></i> Реквизиты КГД
+    </a>
+    <h4 class="mb-0 mt-1"><i class="bi bi-bank"></i> {{ action }} реквизиты КГД</h4>
+</div>
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">{{ form.department.label }}</label>
+                        {{ form.department }}
+                        {% if form.department.errors %}<div class="text-danger small mt-1">{{ form.department.errors }}</div>{% endif %}
+                        <div class="form-text">Оставьте пустым для общей записи (fallback для всех подразделений).</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">
+                            {{ form.name.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors }}</div>{% endif %}
+                        <div class="form-text">Полное наименование органа, например: «Департамент государственных доходов по г. Алматы»</div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">{{ form.bin_number.label }}</label>
+                            {{ form.bin_number }}
+                            {% if form.bin_number.errors %}<div class="text-danger small mt-1">{{ form.bin_number.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold small">{{ form.city.label }}</label>
+                            {{ form.city }}
+                            {% if form.city.errors %}<div class="text-danger small mt-1">{{ form.city.errors }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">{{ form.address.label }}</label>
+                        {{ form.address }}
+                        {% if form.address.errors %}<div class="text-danger small mt-1">{{ form.address.errors }}</div>{% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">{{ form.phone.label }}</label>
+                        {{ form.phone }}
+                        {% if form.phone.errors %}<div class="text-danger small mt-1">{{ form.phone.errors }}</div>{% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">{{ form.deputy_name.label }}</label>
+                        {{ form.deputy_name }}
+                        {% if form.deputy_name.errors %}<div class="text-danger small mt-1">{{ form.deputy_name.errors }}</div>{% endif %}
+                        <div class="form-text">Используется в документах как подписант</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">{{ form.deputy_position.label }}</label>
+                        {{ form.deputy_position }}
+                        {% if form.deputy_position.errors %}<div class="text-danger small mt-1">{{ form.deputy_position.errors }}</div>{% endif %}
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        {{ form.is_active }}
+                        <label class="form-check-label fw-semibold small">{{ form.is_active.label }}</label>
+                        {% if form.is_active.errors %}<div class="text-danger small mt-1">{{ form.is_active.errors }}</div>{% endif %}
+                    </div>
+
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Сохранить
+                        </button>
+                        <a href="{% url 'cases:tax_authority_list' %}" class="btn btn-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header fw-semibold small">
+                <i class="bi bi-info-circle"></i> Переменные в шаблонах
+            </div>
+            <div class="card-body">
+                <ul class="small text-muted mb-0">
+                    {% verbatim %}
+                    <li><code>{{ authority_name }}</code> — наименование органа</li>
+                    <li><code>{{ authority_address }}</code> — адрес</li>
+                    <li><code>{{ city }}</code> — город</li>
+                    <li><code>{{ deputy_name }}</code> — ФИО заместителя</li>
+                    <li><code>{{ deputy_position }}</code> — должность заместителя</li>
+                    {% endverbatim %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -72,12 +72,22 @@ def generate_doc_number(doc_type: str, case=None) -> str:
     return f"{prefix}-{dept_code}-{date_str}-{seq:07d}"
 
 
+def _get_authority_details(case):
+    """Возвращает TaxAuthorityDetails для дела: сначала по подразделению, затем первую активную."""
+    from apps.cases.models import TaxAuthorityDetails
+    dept = getattr(case, "department", None)
+    if dept is not None:
+        details = TaxAuthorityDetails.objects.filter(department=dept, is_active=True).first()
+        if details:
+            return details
+    return TaxAuthorityDetails.objects.filter(is_active=True).first()
+
+
 def get_document_context(case) -> dict:
     """Формирует контекст подстановки для шаблона документа."""
-    from apps.cases.models import TaxAuthorityDetails
     today = date.today()
     responsible = case.responsible_user
-    details = TaxAuthorityDetails.get_singleton()
+    details = _get_authority_details(case)
     return {
         "case_number": case.case_number,
         "case_basis": case.basis.name if case.basis else "",
@@ -96,9 +106,10 @@ def get_document_context(case) -> dict:
         "responsible_position": responsible.position.name if (responsible and responsible.position) else "",
         "responsible_phone": responsible.phone if responsible else "",
         "taxpayer_iin_bin": case.taxpayer.iin_bin,
-        "authority_name": details.name,
-        "authority_address": details.address,
-        "deputy_name": details.deputy_name,
+        "authority_name": details.name if details else "",
+        "authority_address": details.address if details else "",
+        "deputy_name": details.deputy_name if details else "",
+        "city": (details.city if details else "") or "г. Астана",
     }
 
 
@@ -195,9 +206,8 @@ def generate_preliminary_decision(case, form_data: dict, user) -> CaseDocument:
     if not template:
         raise ValueError("Активный шаблон «Предварительное решение» не найден.")
 
-    from apps.cases.models import TaxAuthorityDetails
     context = get_document_context(case)
-    details = TaxAuthorityDetails.get_singleton()
+    details = _get_authority_details(case)
 
     period_from = form_data["period_from"]
     period_to = form_data["period_to"]
@@ -220,7 +230,7 @@ def generate_preliminary_decision(case, form_data: dict, user) -> CaseDocument:
         "criterion_1_text": (form_data.get("criterion_1_text") or "").strip(),
         "criterion_2_text": (form_data.get("criterion_2_text") or "").strip(),
         "criterion_3_text": (form_data.get("criterion_3_text") or "").strip(),
-        "deputy_position": details.deputy_position or "______",
+        "deputy_position": (details.deputy_position if details else "") or "______",
         "doc_type_display": dict(DocumentType.choices).get(doc_type, doc_type),
     })
 

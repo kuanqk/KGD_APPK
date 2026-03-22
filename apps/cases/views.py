@@ -402,6 +402,7 @@ class ReferenceIndexView(ReferenceAdminMixin, View):
                 "category": CaseCategory.objects.count(),
                 "position": Position.objects.count(),
                 "department": Department.objects.count(),
+                "tax_authority": TaxAuthorityDetails.objects.count(),
             }
         })
 
@@ -736,30 +737,62 @@ class DepartmentUpdateView(ReferenceAdminMixin, UpdateView):
 
 # ── Реквизиты КГД ─────────────────────────────────────────────────────────────
 
-class TaxAuthorityDetailsView(ReferenceAdminMixin, View):
-    template_name = "cases/references/tax_authority.html"
+class TaxAuthorityListView(ReferenceAdminMixin, ListView):
+    model = TaxAuthorityDetails
+    template_name = "cases/references/tax_authority_list.html"
+    paginate_by = 50
 
-    def get(self, request):
-        from django.shortcuts import render
-        details = TaxAuthorityDetails.get_singleton()
-        form = TaxAuthorityDetailsForm(instance=details)
-        return render(request, self.template_name, {"form": form, "details": details})
+    def get_queryset(self):
+        return TaxAuthorityDetails.objects.select_related("department").order_by("name")
 
-    def post(self, request):
-        from django.shortcuts import render, redirect
+
+class TaxAuthorityCreateView(ReferenceAdminMixin, CreateView):
+    model = TaxAuthorityDetails
+    form_class = TaxAuthorityDetailsForm
+    template_name = "cases/references/tax_authority_form.html"
+    success_url = reverse_lazy("cases:tax_authority_list")
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["action"] = "Создать"
+        return ctx
+
+    def form_valid(self, form):
         from apps.audit.services import audit_log
-        details = TaxAuthorityDetails.get_singleton()
-        form = TaxAuthorityDetailsForm(request.POST, instance=details)
-        if form.is_valid():
-            obj = form.save(commit=False)
-            obj.updated_by = request.user
-            obj.save()
-            audit_log(
-                user=request.user,
-                action="tax_authority_updated",
-                entity_type="tax_authority_details",
-                entity_id=obj.pk,
-                details={"name": obj.name},
-            )
-            return redirect("cases:tax_authority")
-        return render(request, self.template_name, {"form": form, "details": details})
+        obj = form.save(commit=False)
+        obj.updated_by = self.request.user
+        obj.save()
+        audit_log(
+            user=self.request.user,
+            action="tax_authority_created",
+            entity_type="tax_authority_details",
+            entity_id=obj.pk,
+            details={"name": obj.name},
+        )
+        return redirect(self.success_url)
+
+
+class TaxAuthorityUpdateView(ReferenceAdminMixin, UpdateView):
+    model = TaxAuthorityDetails
+    form_class = TaxAuthorityDetailsForm
+    template_name = "cases/references/tax_authority_form.html"
+    success_url = reverse_lazy("cases:tax_authority_list")
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["action"] = "Редактировать"
+        return ctx
+
+    def form_valid(self, form):
+        from apps.audit.services import audit_log
+        obj = form.save(commit=False)
+        obj.updated_by = self.request.user
+        obj.save()
+        audit_log(
+            user=self.request.user,
+            action="tax_authority_updated",
+            entity_type="tax_authority_details",
+            entity_id=obj.pk,
+            details={"name": obj.name},
+        )
+        return redirect(self.success_url)

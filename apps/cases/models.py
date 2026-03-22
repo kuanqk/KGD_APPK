@@ -340,11 +340,23 @@ class StagnationSettings(models.Model):
 
 
 class TaxAuthorityDetails(models.Model):
-    """Singleton — реквизиты административного органа (КГД) для подстановки в документы."""
+    """Реквизиты административного органа (КГД) — по одной записи на подразделение."""
+    department = models.OneToOneField(
+        Department,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="authority_details",
+        verbose_name="Подразделение",
+    )
     name = models.CharField(max_length=500, verbose_name="Наименование административного органа")
-    address = models.TextField(verbose_name="Адрес")
-    deputy_name = models.CharField(max_length=300, verbose_name="ФИО заместителя")
+    bin_number = models.CharField(max_length=12, blank=True, verbose_name="БИН органа")
+    address = models.TextField(blank=True, verbose_name="Адрес")
+    city = models.CharField(max_length=200, blank=True, verbose_name="Город")
+    phone = models.CharField(max_length=50, blank=True, verbose_name="Телефон")
+    deputy_name = models.CharField(max_length=300, blank=True, verbose_name="ФИО заместителя")
     deputy_position = models.CharField(max_length=300, blank=True, verbose_name="Должность заместителя")
+    is_active = models.BooleanField(default=True, verbose_name="Активна", db_index=True)
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Последнее обновление")
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -356,11 +368,8 @@ class TaxAuthorityDetails(models.Model):
     class Meta:
         verbose_name = "Реквизиты КГД"
         verbose_name_plural = "Реквизиты КГД"
+        ordering = ["name"]
 
     def __str__(self):
-        return self.name or "Реквизиты КГД"
-
-    @classmethod
-    def get_singleton(cls) -> "TaxAuthorityDetails":
-        obj, _ = cls.objects.get_or_create(pk=1, defaults={"name": "", "address": "", "deputy_name": ""})
-        return obj
+        dept_str = f" ({self.department})" if self.department else ""
+        return f"{self.name}{dept_str}" or "Реквизиты КГД"

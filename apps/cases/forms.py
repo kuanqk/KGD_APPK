@@ -107,12 +107,20 @@ class CaseCreateForm(forms.Form):
 class TaxAuthorityDetailsForm(forms.ModelForm):
     class Meta:
         model = TaxAuthorityDetails
-        fields = ["name", "address", "deputy_name", "deputy_position"]
+        fields = [
+            "department", "name", "bin_number", "address", "city",
+            "phone", "deputy_name", "deputy_position", "is_active",
+        ]
         widgets = {
+            "department": forms.Select(attrs={"class": "form-control"}),
             "name": forms.TextInput(attrs={"class": "form-control"}),
+            "bin_number": forms.TextInput(attrs={"class": "form-control", "maxlength": 12}),
             "address": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "city": forms.TextInput(attrs={"class": "form-control"}),
+            "phone": forms.TextInput(attrs={"class": "form-control"}),
             "deputy_name": forms.TextInput(attrs={"class": "form-control"}),
             "deputy_position": forms.TextInput(attrs={"class": "form-control"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
 
 
