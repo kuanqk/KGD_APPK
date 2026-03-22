@@ -60,7 +60,6 @@
 <body>
     <div class="header">
         <div class="doc-title">{{ doc_type_display|upper }}</div>
-        <div class="doc-number">{{ context.date_today }}</div>
     </div>
 
     <div class="body-content">
@@ -70,14 +69,15 @@
     <div class="footer">
         <div class="signature-block">
             <div>
-                <p>{{ context.responsible_position }}</p>
-                <p>{{ context.responsible_name }}</p>
+                <p>Главный исполнитель</p>
+                <p>{{ context.deputy_name }}</p>
             </div>
             <div style="text-align:right;">
                 <p>________________</p>
                 <p>(подпись)</p>
             </div>
         </div>
+        <p style="margin-top:24pt;">г. Астана, {{ context.date_today }}</p>
     </div>
 </body>
 </html>
