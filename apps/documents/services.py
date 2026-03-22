@@ -195,13 +195,18 @@ def generate_preliminary_decision(case, form_data: dict, user) -> CaseDocument:
     if not template:
         raise ValueError("Активный шаблон «Предварительное решение» не найден.")
 
+    from apps.cases.models import TaxAuthorityDetails
     context = get_document_context(case)
+    details = TaxAuthorityDetails.get_singleton()
 
     period_from = form_data["period_from"]
     period_to = form_data["period_to"]
 
+    # "other" is rendered separately via risk_other_comment — exclude from loop
     risk_items = []
     for key, label in PRELIMINARY_DECISION_RISKS:
+        if key == "other":
+            continue
         if form_data.get(f"risk_{key}"):
             comment = (form_data.get(f"risk_{key}_comment") or "").strip()
             risk_items.append({"label": label, "comment": comment})
@@ -211,6 +216,11 @@ def generate_preliminary_decision(case, form_data: dict, user) -> CaseDocument:
         "period_from": period_from.strftime("%d.%m.%Y"),
         "period_to": period_to.strftime("%d.%m.%Y"),
         "risk_items": risk_items,
+        "risk_other_comment": (form_data.get("risk_other_comment") or "").strip(),
+        "criterion_1_text": (form_data.get("criterion_1_text") or "").strip(),
+        "criterion_2_text": (form_data.get("criterion_2_text") or "").strip(),
+        "criterion_3_text": (form_data.get("criterion_3_text") or "").strip(),
+        "deputy_position": details.deputy_position or "______",
         "doc_type_display": dict(DocumentType.choices).get(doc_type, doc_type),
     })
 

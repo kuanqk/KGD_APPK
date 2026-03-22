@@ -344,6 +344,7 @@ class TaxAuthorityDetails(models.Model):
     name = models.CharField(max_length=500, verbose_name="Наименование административного органа")
     address = models.TextField(verbose_name="Адрес")
     deputy_name = models.CharField(max_length=300, verbose_name="ФИО заместителя")
+    deputy_position = models.CharField(max_length=300, blank=True, verbose_name="Должность заместителя")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Последнее обновление")
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

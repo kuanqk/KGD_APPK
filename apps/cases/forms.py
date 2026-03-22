@@ -107,11 +107,12 @@ class CaseCreateForm(forms.Form):
 class TaxAuthorityDetailsForm(forms.ModelForm):
     class Meta:
         model = TaxAuthorityDetails
-        fields = ["name", "address", "deputy_name"]
+        fields = ["name", "address", "deputy_name", "deputy_position"]
         widgets = {
             "name": forms.TextInput(attrs={"class": "form-control"}),
             "address": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
             "deputy_name": forms.TextInput(attrs={"class": "form-control"}),
+            "deputy_position": forms.TextInput(attrs={"class": "form-control"}),
         }
 
 
