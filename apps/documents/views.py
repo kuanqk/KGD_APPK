@@ -268,6 +268,7 @@ class PreliminaryDecisionFormView(LoginRequiredMixin, View):
             "risk_fields": risk_fields,
             "authority_name": details.name or "",
             "deputy_name": details.deputy_name or "",
+            "deputy_position": details.deputy_position or "",
             "auto_fields": {
                 "Наименование органа": details.name or "—",
                 "Налогоплательщик": f"{case.taxpayer.name} (БИН/ИИН: {case.taxpayer.iin_bin})",

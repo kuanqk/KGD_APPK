@@ -23,8 +23,12 @@
      id="pd-root"
      data-authority-name="{{ authority_name }}"
      data-deputy-name="{{ deputy_name }}"
-     data-taxpayer="{{ case.taxpayer.name }} ({{ case.taxpayer.iin_bin }})"
-     data-case-number="{{ case.case_number }}">
+     data-deputy-position="{{ deputy_position|default:'' }}"
+     data-taxpayer-name="{{ case.taxpayer.name }}"
+     data-taxpayer-iin="{{ case.taxpayer.iin_bin }}"
+     data-taxpayer-address="{{ case.taxpayer.address|default:'' }}"
+     data-responsible-name="{{ case.responsible_user.get_full_name|default:'' }}"
+     data-responsible-phone="{{ case.responsible_user.phone|default:'' }}">
 
     {# ── Левая колонка ───────────────────────────────────────────────── #}
     <div class="col-md-6">
@@ -90,6 +94,23 @@
                         </div>
                     </div>
 
+                    {# Критерии #}
+                    <div class="fw-semibold small mb-2">
+                        <i class="bi bi-list-ol"></i> Критерии
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small text-muted">1. несоответствие КНН к среднеотраслевому значению</label>
+                        <input type="text" class="form-control form-control-sm" id="id_criterion_1_text" name="criterion_1_text" placeholder="уточните значение">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small text-muted">2. минимизация налоговых обязательств за период</label>
+                        <input type="text" class="form-control form-control-sm" id="id_criterion_2_text" name="criterion_2_text" placeholder="уточните период">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">3. несоответствие сумм убытков</label>
+                        <input type="text" class="form-control form-control-sm" id="id_criterion_3_text" name="criterion_3_text" placeholder="уточните сумму">
+                    </div>
+
                     {# Риски #}
                     <div class="fw-semibold small mb-2">
                         <i class="bi bi-exclamation-triangle"></i> Риски
@@ -149,20 +170,28 @@
 {% block extra_js %}
 <script>
 (function () {
-    const root         = document.getElementById('pd-root');
-    const authorityName = root.dataset.authorityName || '[____]';
-    const deputyName   = root.dataset.deputyName    || '[____]';
-    const taxpayer     = root.dataset.taxpayer      || '[____]';
-    const caseNumber   = root.dataset.caseNumber    || '[____]';
+    const root            = document.getElementById('pd-root');
+    const authorityName   = root.dataset.authorityName   || '[____]';
+    const deputyName      = root.dataset.deputyName      || '[____]';
+    const deputyPosition  = root.dataset.deputyPosition  || '[____]';
+    const taxpayerName    = root.dataset.taxpayerName    || '[____]';
+    const taxpayerIin     = root.dataset.taxpayerIin     || '[____]';
+    const taxpayerAddress = root.dataset.taxpayerAddress || '[____]';
+    const responsibleName = root.dataset.responsibleName || '[____]';
+    const responsiblePhone= root.dataset.responsiblePhone|| '[____]';
 
-    const outgoingInput  = document.getElementById('id_outgoing_number');
+    const outgoingInput   = document.getElementById('id_outgoing_number');
     const periodFromInput = document.getElementById('id_period_from');
     const periodToInput   = document.getElementById('id_period_to');
-    const preview        = document.getElementById('preview-content');
+    const crit1Input      = document.getElementById('id_criterion_1_text');
+    const crit2Input      = document.getElementById('id_criterion_2_text');
+    const crit3Input      = document.getElementById('id_criterion_3_text');
+    const preview         = document.getElementById('preview-content');
 
+    // All risks; last one (other) is rendered separately
     const riskData = [
         {% for rf in risk_fields %}
-        { checkId: '{{ rf.checkbox.id_for_label }}', label: '{{ rf.label|escapejs }}', commentId: '{{ rf.comment.id_for_label }}' },
+        { checkId: '{{ rf.checkbox.id_for_label }}', label: '{{ rf.label|escapejs }}', commentId: '{{ rf.comment.id_for_label }}', isOther: {% if rf.key == 'other' %}true{% else %}false{% endif %} },
         {% endfor %}
     ];
 
@@ -181,30 +210,37 @@
         return parts[2] + '.' + parts[1] + '.' + parts[0];
     }
 
+    function fval(el) { return el ? (el.value || '').trim() : ''; }
+
     function a(text) {
         return '<span style="background:#FFF59D;padding:0 2px">' + (text || '[____]') + '</span>';
     }
-
-    function m(text) {
+    function mv(text) {
         return '<span style="background:#CCFF90;padding:0 2px">' + (text || '[____]') + '</span>';
     }
-
-    function escHtml(str) {
-        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    function esc(str) {
+        return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
     function render() {
-        const outgoing   = (outgoingInput.value || '').trim();
+        const outgoing   = fval(outgoingInput);
         const periodFrom = formatDate(periodFromInput.value);
         const periodTo   = formatDate(periodToInput.value);
+        const crit1      = fval(crit1Input);
+        const crit2      = fval(crit2Input);
+        const crit3      = fval(crit3Input);
 
-        // Collect checked risks
+        // Collect named risks (exclude "other")
         const checkedRisks = [];
+        let otherComment = '';
         riskData.forEach(function(r) {
             const cb = document.getElementById(r.checkId);
-            if (cb && cb.checked) {
-                const commentEl = document.getElementById(r.commentId);
-                const comment = commentEl ? (commentEl.value || '').trim() : '';
+            if (!cb) return;
+            const commentEl = document.getElementById(r.commentId);
+            const comment = commentEl ? fval(commentEl) : '';
+            if (r.isOther) {
+                otherComment = comment;
+            } else if (cb.checked) {
                 checkedRisks.push({ label: r.label, comment: comment });
             }
         });
@@ -213,42 +249,87 @@
         if (checkedRisks.length === 0) {
             risksHtml = '<p style="color:#999">[Выберите хотя бы один риск]</p>';
         } else {
-            checkedRisks.forEach(function(r, i) {
-                risksHtml += '<p>' + (i + 1) + '. ' + m(escHtml(r.label));
-                if (r.comment) risksHtml += ': <em>' + m(escHtml(r.comment)) + '</em>';
-                risksHtml += '.</p>';
+            checkedRisks.forEach(function(r) {
+                risksHtml += '<p>- ' + mv(esc(r.label));
+                if (r.comment) risksHtml += ', <em>' + mv(esc(r.comment)) + '</em>';
+                risksHtml += ';</p>';
             });
         }
 
         preview.innerHTML =
-            '<h4 style="text-align:center;font-weight:bold;margin-bottom:16px;">ПРЕДВАРИТЕЛЬНОЕ РЕШЕНИЕ</h4>' +
-            '<p><strong>Исходящий №:</strong> ' + m(outgoing) + ' от ' + a(todayFormatted()) + ' г.</p>' +
-            '<p>' +
-            a(authorityName) +
-            ' в рамках административного производства по делу <strong>№ ' + a(caseNumber) + '</strong>' +
-            ' в отношении налогоплательщика <strong>' + a(taxpayer) + '</strong>,' +
-            ' по результатам анализа финансово-хозяйственной деятельности' +
-            ' за период с <strong>' + m(periodFrom) + '</strong> по <strong>' + m(periodTo) + '</strong>,' +
-            ' в соответствии со статьями 70–73 АППК РК выносит:' +
-            '</p>' +
-            '<p>По результатам предварительного изучения деятельности налогоплательщика' +
-            ' установлены следующие риски, являющиеся основаниями для инициирования' +
-            ' внеплановой тематической налоговой проверки:</p>' +
+            // 1. Заголовок
+            '<h4 style="text-align:center;font-weight:bold;margin-bottom:12px;">' +
+            'Предварительное решение<br><span style="font-size:0.85em">по назначению комплексной/тематической налоговой проверки</span></h4>' +
+
+            // 2. Исходящий №
+            '<p><strong>Исходящий №:</strong> ' + mv(esc(outgoing)) + ' от ' + a(todayFormatted()) + ' г.</p>' +
+
+            // 3. Вводный абзац с периодом и критериями
+            '<p>' + a(esc(authorityName)) +
+            ' (далее \u2013 Департамент) в соответствии со статьей 42 и пунктом 3 статьи 151' +
+            ' Налогового кодекса Республики Казахстан на основе анализа налоговой отчетности,' +
+            ' данных из информационных систем органов государственных доходов,' +
+            ' сведений, полученных от уполномоченных государственных органов и иных источников,' +
+            ' выявлены признаки искажения объектов налогообложения и (или) объектов,' +
+            ' связанных с налогообложением за период с ' + mv(periodFrom) + ' года по ' + mv(periodTo) +
+            ' года по основным критериям:</p>' +
+
+            // 4. Три критерия
+            '<p>1. несоответствие коэффициента налоговой нагрузки к среднеотраслевому значению ' +
+            mv(esc(crit1)) + ';</p>' +
+            '<p>2. минимизация налоговых обязательств путем представления дополнительных форм' +
+            ' налоговой отчетности с уменьшением сумм исчисленных налогов, в том числе за ранее' +
+            ' проверенный период ' + mv(esc(crit2)) + ';</p>' +
+            '<p>3. несоответствие сумм убытков, переносимых на последующие периоды ' + mv(esc(crit3)) + '.</p>' +
+
+            // 5. Риски — вступление
+            '<p>Вместе с тем, установлены риски нарушений несоблюдения налогового' +
+            ' законодательства, связанные с определением налогооблагаемого дохода,' +
+            ' вычетов и возникновением убытка, в том числе:</p>' +
+
+            // 6. Список рисков
             risksHtml +
-            '<p>На основании выявленных рисков предварительно принимается решение об' +
-            ' инициировании внеплановой тематической налоговой проверки.</p>' +
-            '<p>Согласно пункту 3 статьи 73 АППК РК, Вы вправе предоставить возражение к' +
-            ' предварительному решению в срок не позднее двух рабочих дней со дня его получения.</p>' +
-            '<br>' +
-            '<p>Главный исполнитель</p>' +
-            '<p><strong>' + a(deputyName) + '</strong></p>' +
-            '<p>________________</p>' +
-            '<p>(подпись)</p>' +
-            '<br>' +
-            '<p>\u0433. \u0410\u0441\u0442\u0430\u043d\u0430, ' + todayFormatted() + '</p>';
+
+            // 7. Иные отклонения (risk_other_comment)
+            '<p>- ' + mv(esc(otherComment) || '[____]') + '.</p>' +
+
+            // 8. Три статичных абзаца
+            '<p>Указанные признаки выражаются в совокупности взаимосвязанных хозяйственных' +
+            ' операций и могут оказывать влияние на налоговые обязательства налогоплательщика' +
+            ' в течение всего проверяемого периода и требуют оценки полноты, достоверности' +
+            ' и корректности формирования налоговой базы в целом.</p>' +
+
+            '<p>Пунктом 3 статьи 190 Налогового кодекса определено, что налоговый учет' +
+            ' основывается на данных бухгалтерского учета. Согласно Закону Республики Казахстан' +
+            ' от 28 февраля 2007 года \u2116 234 \u00ab О бухгалтерском учете и финансовой' +
+            ' отчетности\u00bb бухгалтерская документация включает в себя первичные документы,' +
+            ' регистры бухгалтерского учета, финансовую отчетность и учетную политику,' +
+            ' бухгалтерские записи производятся на основании первичных документов.</p>' +
+
+            '<p>Руководствуясь статьей 73 Административного процедурно-процессуального' +
+            ' Кодекса Республики Казахстан (далее \u2013 АППК) Департамент просит выразить' +
+            ' свою позицию к предварительному решению по административному делу не позднее' +
+            ' чем пяти рабочих дней до принятия административного акта.</p>' +
+
+            // 9. Подпись
+            '<p style="margin-top:24px">' +
+            '<strong>' + a(esc(deputyPosition)) + '</strong>' +
+            '&nbsp;&nbsp;&nbsp; подпись &nbsp;&nbsp;&nbsp;' +
+            '<strong>' + a(esc(deputyName)) + '</strong></p>' +
+
+            // 10. Ознакомление
+            '<p style="margin-top:16px">С предварительным решением ознакомлен:' +
+            ' (ФИО, должность, либо по доверенности, дата, подпись, печать при ее наличии)</p>' +
+
+            // 11. Исполнитель
+            '<p style="margin-top:16px"><em>Исполнитель: ' + a(esc(responsibleName)) +
+            ', тел. ' + a(esc(responsiblePhone)) + '</em></p>' +
+
+            // 12. Дата и город
+            '<p>\u0433. \u0410\u0441\u0442\u0430\u043d\u0430, ' + a(todayFormatted()) + '</p>';
     }
 
-    // Show/hide comment area when checkbox toggled
+    // Show/hide comment textarea when checkbox toggled
     riskData.forEach(function(r) {
         const cb = document.getElementById(r.checkId);
         if (!cb) return;
@@ -256,7 +337,6 @@
         function syncWrap() {
             if (wrap) wrap.style.display = cb.checked ? 'block' : 'none';
         }
-        // Show if already checked (form re-render after error)
         syncWrap();
         cb.addEventListener('change', function() { syncWrap(); render(); });
         const commentEl = document.getElementById(r.commentId);
@@ -266,6 +346,9 @@
     outgoingInput.addEventListener('input', render);
     periodFromInput.addEventListener('change', render);
     periodToInput.addEventListener('change', render);
+    if (crit1Input) crit1Input.addEventListener('input', render);
+    if (crit2Input) crit2Input.addEventListener('input', render);
+    if (crit3Input) crit3Input.addEventListener('input', render);
     render();
 })();
 </script>
