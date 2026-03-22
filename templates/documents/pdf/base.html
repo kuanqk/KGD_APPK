@@ -12,56 +12,21 @@
             margin: 2cm 2.5cm 2cm 3cm;
         }
         body {
-            font-family: DejaVu, serif;
-            font-size: 12pt;
-            line-height: 1.5;
+            font-family: Arial, DejaVu, sans-serif;
+            font-size: 14pt;
+            line-height: 1.2;
             color: #000;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 24pt;
-        }
-        .header .org-name {
-            font-weight: bold;
-            font-size: 11pt;
-            text-transform: uppercase;
-        }
-        .header .doc-title {
-            font-weight: bold;
-            font-size: 13pt;
-            margin-top: 16pt;
-        }
-        .header .doc-number {
-            font-size: 11pt;
-            margin-top: 4pt;
         }
         .body-content {
             text-align: justify;
         }
-        .footer {
-            margin-top: 36pt;
+        .body-content p {
+            text-indent: 1.25cm;
+            margin: 6px 0;
         }
-        .signature-block {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 48pt;
-        }
-        .requisites {
-            border: 1px solid #ccc;
-            padding: 8pt;
-            font-size: 10pt;
-            margin-bottom: 16pt;
-        }
-        .requisites table { width: 100%; }
-        .requisites td { padding: 2pt 6pt; }
-        .requisites td:first-child { font-weight: bold; white-space: nowrap; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="doc-title">{{ doc_type_display|upper }}</div>
-    </div>
-
     <div class="body-content">
         {{ body }}
     </div>
