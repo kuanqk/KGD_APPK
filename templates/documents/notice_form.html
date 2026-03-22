@@ -19,8 +19,17 @@
 {% endfor %}
 {% endif %}
 
-<div class="row g-4">
-    <div class="col-md-8">
+<div class="row g-4"
+     id="notice-root"
+     data-authority="{{ auto_fields|dictsort:'0'|first|last }}"
+     data-authority-name="{{ authority_name }}"
+     data-taxpayer="{{ case.taxpayer.name }} ({{ case.taxpayer.iin_bin }})"
+     data-case-number="{{ case.case_number }}"
+     data-responsible="{{ case.responsible_user.get_full_name|default:'' }}"
+     data-phone="{{ case.responsible_user.phone|default:'' }}">
+
+    {# ── Левая колонка ───────────────────────────────────────────────── #}
+    <div class="col-md-6">
 
         {# Блок 1: Данные из системы #}
         <div class="card mb-3 border-0 bg-light">
@@ -52,7 +61,7 @@
                     {% endif %}
 
                     <div class="row g-3 mb-3">
-                        <div class="col-md-5">
+                        <div class="col-md-6">
                             <label class="form-label fw-semibold small">
                                 {{ form.hearing_date.label }} <span class="text-danger">*</span>
                             </label>
@@ -61,7 +70,7 @@
                             <div class="text-danger small mt-1">{{ form.hearing_date.errors }}</div>
                             {% endif %}
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label class="form-label fw-semibold small">
                                 {{ form.hearing_time.label }} <span class="text-danger">*</span>
                             </label>
@@ -84,7 +93,7 @@
 
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-file-earmark-check"></i> Сформировать извещение
+                            <i class="bi bi-file-earmark-pdf"></i> Сформировать PDF
                         </button>
                         <a href="{% url 'cases:detail' pk=case.pk %}" class="btn btn-secondary">Отмена</a>
                     </div>
@@ -93,5 +102,84 @@
         </div>
 
     </div>
+
+    {# ── Правая колонка: предпросмотр ────────────────────────────────── #}
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header fw-semibold small">
+                <i class="bi bi-eye"></i> Предпросмотр документа
+            </div>
+            <div class="card-body">
+                <div id="preview-content"
+                     style="font-size:13px; line-height:1.8; white-space:pre-wrap; font-family: serif;">
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const root        = document.getElementById('notice-root');
+    const authorityName = root.dataset.authorityName || '[____]';
+    const taxpayer    = root.dataset.taxpayer        || '[____]';
+    const caseNumber  = root.dataset.caseNumber      || '[____]';
+    const responsible = root.dataset.responsible     || '[____]';
+    const phone       = root.dataset.phone           || '[____]';
+
+    const dateInput    = document.getElementById('id_hearing_date');
+    const timeInput    = document.getElementById('id_hearing_time');
+    const addressInput = document.getElementById('id_hearing_address');
+    const preview      = document.getElementById('preview-content');
+
+    const MONTHS_RU = [
+        '', 'января','февраля','марта','апреля','мая','июня',
+        'июля','августа','сентября','октября','ноября','декабря'
+    ];
+
+    function formatDate(val) {
+        if (!val) return '[____]';
+        const parts = val.split('-');
+        if (parts.length !== 3) return val;
+        const d = parseInt(parts[2], 10);
+        const m = parseInt(parts[1], 10);
+        const y = parts[0];
+        return '\u00ab' + String(d).padStart(2,'0') + '\u00bb ' + MONTHS_RU[m] + ' ' + y;
+    }
+
+    function val(input) {
+        return (input.value || '').trim() || '[____]';
+    }
+
+    function render() {
+        const date    = formatDate(dateInput.value);
+        const time    = val(timeInput);
+        const address = val(addressInput);
+
+        preview.textContent =
+            authorityName + '\n' +
+            'в соответствии со статьей 73 Административного процедурно-процессуального\n' +
+            'кодекса Республики Казахстан (далее \u2013 АППК РК), извещает Вас о проведении\n' +
+            'процедуры заслушивания к административному делу об инициировании налоговой\n' +
+            'проверки ' + caseNumber + ' - ' + taxpayer + '.\n\n' +
+            'Процедура заслушивания может осуществляться путем приглашения участника\n' +
+            'административной процедуры на заслушивание, в том числе посредством\n' +
+            'видеоконференцсвязи или иных средств коммуникации.\n\n' +
+            'Процедура заслушивания состоится: ' + date + ' года\n' +
+            'в ' + time + ' часов, по адресу: ' + address + '.\n' +
+            'Контактное лицо ' + responsible + ', тел. ' + phone + '.\n\n' +
+            'Согласно пункту 3 статьи 73 АППК, вы вправе предоставить или высказать\n' +
+            'возражение к предварительному решению по административному делу\n' +
+            'в срок не позднее двух рабочих дней со дня его получения.';
+    }
+
+    dateInput.addEventListener('change', render);
+    timeInput.addEventListener('change', render);
+    addressInput.addEventListener('input', render);
+    render();
+})();
+</script>
 {% endblock %}
