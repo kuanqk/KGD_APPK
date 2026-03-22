@@ -23,8 +23,9 @@
 
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Имя пользователя *</label>
+                            <label class="form-label small fw-semibold">Логин (для входа в систему) *</label>
                             {{ form.username }}
+                            <div class="form-text">Используется только для входа. Например: ivanov_ii</div>
                             {% if form.username.errors %}<div class="text-danger small">{{ form.username.errors }}</div>{% endif %}
                         </div>
                         <div class="col-md-6">
@@ -33,12 +34,14 @@
                             {% if form.role.errors %}<div class="text-danger small">{{ form.role.errors }}</div>{% endif %}
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Фамилия</label>
+                            <label class="form-label small fw-semibold">Фамилия *</label>
                             {{ form.last_name }}
+                            {% if form.last_name.errors %}<div class="text-danger small">{{ form.last_name.errors }}</div>{% endif %}
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Имя</label>
+                            <label class="form-label small fw-semibold">Имя *</label>
                             {{ form.first_name }}
+                            {% if form.first_name.errors %}<div class="text-danger small">{{ form.first_name.errors }}</div>{% endif %}
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-semibold">Email</label>

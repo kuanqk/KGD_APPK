@@ -31,6 +31,11 @@ class UserCreateForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ["username", "first_name", "last_name", "email", "role", "region", "phone", "position", "department"]
+        labels = {
+            "username": "Логин (для входа в систему)",
+            "first_name": "Имя",
+            "last_name": "Фамилия",
+        }
         widgets = {
             "username": forms.TextInput(attrs={"class": "form-control"}),
             "first_name": forms.TextInput(attrs={"class": "form-control"}),
@@ -40,6 +45,11 @@ class UserCreateForm(forms.ModelForm):
             "region": forms.TextInput(attrs={"class": "form-control"}),
             "phone": forms.TextInput(attrs={"class": "form-control"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["first_name"].required = True
+        self.fields["last_name"].required = True
 
     def clean_password2(self):
         p1 = self.cleaned_data.get("password1", "")
@@ -76,6 +86,10 @@ class UserUpdateForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ["first_name", "last_name", "email", "role", "region", "phone", "position", "department", "is_active"]
+        labels = {
+            "first_name": "Имя",
+            "last_name": "Фамилия",
+        }
         widgets = {
             "first_name": forms.TextInput(attrs={"class": "form-control"}),
             "last_name": forms.TextInput(attrs={"class": "form-control"}),
@@ -85,3 +99,8 @@ class UserUpdateForm(forms.ModelForm):
             "phone": forms.TextInput(attrs={"class": "form-control"}),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["first_name"].required = True
+        self.fields["last_name"].required = True
