@@ -200,6 +200,7 @@ class NoticeFormView(LoginRequiredMixin, View):
             "case": case,
             "form": form,
             "authority_name": details.name or "",
+            "deputy_name": details.deputy_name or "",
             "auto_fields": {
                 "Наименование органа": details.name or "—",
                 "Налогоплательщик": f"{case.taxpayer.name} (БИН/ИИН: {case.taxpayer.iin_bin})",
