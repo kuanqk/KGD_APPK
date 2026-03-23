@@ -35,8 +35,9 @@ class PreliminaryDecisionForm(forms.Form):
         widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}),
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, case=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.case = case
         for key, label in PRELIMINARY_DECISION_RISKS:
             self.fields[f"risk_{key}"] = forms.BooleanField(
                 label=label,
@@ -52,6 +53,26 @@ class PreliminaryDecisionForm(forms.Form):
                     "placeholder": "Комментарий (необязательно)",
                 }),
             )
+
+    def clean_period_from(self):
+        value = self.cleaned_data.get("period_from")
+        if value and self.case:
+            min_date = self.case.created_at.date()
+            if value < min_date:
+                raise forms.ValidationError(
+                    f"Дата не может быть раньше даты создания дела ({min_date.strftime('%d.%m.%Y')})."
+                )
+        return value
+
+    def clean_period_to(self):
+        value = self.cleaned_data.get("period_to")
+        if value and self.case:
+            min_date = self.case.created_at.date()
+            if value < min_date:
+                raise forms.ValidationError(
+                    f"Дата не может быть раньше даты создания дела ({min_date.strftime('%d.%m.%Y')})."
+                )
+        return value
 
     def clean(self):
         cleaned = super().clean()
@@ -78,6 +99,20 @@ class NoticeForm(forms.Form):
         label="Адрес проведения",
         widget=forms.Textarea(attrs={"class": "form-control", "rows": 2}),
     )
+
+    def __init__(self, *args, case=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.case = case
+
+    def clean_hearing_date(self):
+        value = self.cleaned_data.get("hearing_date")
+        if value and self.case:
+            min_date = self.case.created_at.date()
+            if value < min_date:
+                raise forms.ValidationError(
+                    f"Дата не может быть раньше даты создания дела ({min_date.strftime('%d.%m.%Y')})."
+                )
+        return value
 
 
 class DocumentCreateForm(forms.Form):

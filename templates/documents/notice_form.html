@@ -26,7 +26,8 @@
      data-taxpayer="{{ case.taxpayer.name }} ({{ case.taxpayer.iin_bin }})"
      data-case-number="{{ case.case_number }}"
      data-responsible="{{ case.responsible_user.get_full_name|default:'' }}"
-     data-phone="{{ case.responsible_user.phone|default:'' }}">
+     data-phone="{{ case.responsible_user.phone|default:'' }}"
+     data-min-date="{{ case_created_date }}">
 
     {# ── Левая колонка ───────────────────────────────────────────────── #}
     <div class="col-md-6">
@@ -141,6 +142,11 @@
     const timeInput    = document.getElementById('id_hearing_time');
     const addressInput = document.getElementById('id_hearing_address');
     const preview      = document.getElementById('preview-content');
+
+    const minDate = root.dataset.minDate;
+    if (minDate) {
+        dateInput.min = minDate;
+    }
 
     const MONTHS_RU = [
         '', 'января','февраля','марта','апреля','мая','июня',

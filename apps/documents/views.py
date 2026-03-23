@@ -201,6 +201,7 @@ class NoticeFormView(LoginRequiredMixin, View):
         return {
             "case": case,
             "form": form,
+            "case_created_date": case.created_at.date().isoformat(),
             "authority_name": details.name if details else "",
             "deputy_name": details.deputy_name if details else "",
             "auto_fields": {
@@ -216,13 +217,13 @@ class NoticeFormView(LoginRequiredMixin, View):
         from apps.documents.services import _get_authority_details
         case = self._get_case(request, case_pk)
         details = _get_authority_details(case)
-        form = NoticeForm(initial={"hearing_address": details.address if details else ""})
+        form = NoticeForm(case=case, initial={"hearing_address": details.address if details else ""})
         return render(request, self.template_name, self._build_context(case, form))
 
     def post(self, request, case_pk):
         from django.shortcuts import render
         case = self._get_case(request, case_pk)
-        form = NoticeForm(request.POST)
+        form = NoticeForm(case=case, data=request.POST)
         if form.is_valid():
             try:
                 doc = generate_notice(
@@ -265,6 +266,7 @@ class PreliminaryDecisionFormView(LoginRequiredMixin, View):
         return {
             "case": case,
             "form": form,
+            "case_created_date": case.created_at.date().isoformat(),
             "risk_fields": risk_fields,
             "authority_name": details.name if details else "",
             "deputy_name": details.deputy_name if details else "",
@@ -280,13 +282,13 @@ class PreliminaryDecisionFormView(LoginRequiredMixin, View):
     def get(self, request, case_pk):
         from django.shortcuts import render
         case = self._get_case(request, case_pk)
-        form = PreliminaryDecisionForm()
+        form = PreliminaryDecisionForm(case=case)
         return render(request, self.template_name, self._build_context(case, form))
 
     def post(self, request, case_pk):
         from django.shortcuts import render
         case = self._get_case(request, case_pk)
-        form = PreliminaryDecisionForm(request.POST)
+        form = PreliminaryDecisionForm(case=case, data=request.POST)
         if form.is_valid():
             try:
                 doc = generate_preliminary_decision(

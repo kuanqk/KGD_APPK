@@ -28,7 +28,8 @@
      data-taxpayer-iin="{{ case.taxpayer.iin_bin }}"
      data-taxpayer-address="{{ case.taxpayer.address|default:'' }}"
      data-responsible-name="{{ case.responsible_user.get_full_name|default:'' }}"
-     data-responsible-phone="{{ case.responsible_user.phone|default:'' }}">
+     data-responsible-phone="{{ case.responsible_user.phone|default:'' }}"
+     data-min-date="{{ case_created_date }}">
 
     {# ── Левая колонка ───────────────────────────────────────────────── #}
     <div class="col-md-6">
@@ -187,6 +188,12 @@
     const crit2Input      = document.getElementById('id_criterion_2_text');
     const crit3Input      = document.getElementById('id_criterion_3_text');
     const preview         = document.getElementById('preview-content');
+
+    const minDate = root.dataset.minDate;
+    if (minDate) {
+        periodFromInput.min = minDate;
+        periodToInput.min = minDate;
+    }
 
     // All risks; last one (other) is rendered separately
     const riskData = [
