@@ -56,7 +56,7 @@ class PreliminaryDecisionForm(forms.Form):
 
     def clean_period_from(self):
         value = self.cleaned_data.get("period_from")
-        if value and self.case:
+        if value and self.case and not self.case.allow_backdating:
             min_date = self.case.created_at.date()
             if value < min_date:
                 raise forms.ValidationError(
@@ -66,7 +66,7 @@ class PreliminaryDecisionForm(forms.Form):
 
     def clean_period_to(self):
         value = self.cleaned_data.get("period_to")
-        if value and self.case:
+        if value and self.case and not self.case.allow_backdating:
             min_date = self.case.created_at.date()
             if value < min_date:
                 raise forms.ValidationError(
@@ -106,7 +106,7 @@ class NoticeForm(forms.Form):
 
     def clean_hearing_date(self):
         value = self.cleaned_data.get("hearing_date")
-        if value and self.case:
+        if value and self.case and not self.case.allow_backdating:
             min_date = self.case.created_at.date()
             if value < min_date:
                 raise forms.ValidationError(

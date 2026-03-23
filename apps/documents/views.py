@@ -201,7 +201,7 @@ class NoticeFormView(LoginRequiredMixin, View):
         return {
             "case": case,
             "form": form,
-            "case_created_date": case.created_at.date().isoformat(),
+            "case_created_date": case.created_at.date().isoformat() if not case.allow_backdating else "",
             "authority_name": details.name if details else "",
             "deputy_name": details.deputy_name if details else "",
             "auto_fields": {
@@ -266,7 +266,7 @@ class PreliminaryDecisionFormView(LoginRequiredMixin, View):
         return {
             "case": case,
             "form": form,
-            "case_created_date": case.created_at.date().isoformat(),
+            "case_created_date": case.created_at.date().isoformat() if not case.allow_backdating else "",
             "risk_fields": risk_fields,
             "authority_name": details.name if details else "",
             "deputy_name": details.deputy_name if details else "",
