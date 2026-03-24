@@ -47,13 +47,11 @@
                             <div class="small fw-semibold text-muted mb-1">
                                 {{ n.get_notification_type_display }}
                                 {% if n.case %}
-                                · <a href="{% url 'cases:detail' pk=n.case.pk %}" class="text-decoration-none">
-                                    {{ n.case.case_number }}
-                                </a>
+                                · {% if n.case_accessible %}<a href="{% url 'cases:detail' pk=n.case.pk %}" class="text-decoration-none">{{ n.case.case_number }}</a>{% else %}{{ n.case.case_number }}{% endif %}
                                 {% endif %}
                             </div>
                             <div>
-                                {% if n.url %}
+                                {% if n.url and n.case_accessible %}
                                 <a href="{{ n.url }}" class="text-decoration-none text-dark">{{ n.message }}</a>
                                 {% else %}
                                 {{ n.message }}

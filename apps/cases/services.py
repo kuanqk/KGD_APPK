@@ -104,8 +104,16 @@ def create_case(
         details={"case_number": case.case_number, "taxpayer_iin": taxpayer.iin_bin},
     )
 
-    # Уведомляем ответственного о назначении
-    if responsible_user and responsible_user != operator:
+    # Уведомляем ответственного о назначении только если он имеет доступ к делу
+    can_notify = (
+        responsible_user
+        and responsible_user != operator
+        and (
+            responsible_user.role in ("admin", "reviewer")
+            or responsible_user.department == department
+        )
+    )
+    if can_notify:
         try:
             from django.urls import reverse
             from apps.notifications.models import NotificationType

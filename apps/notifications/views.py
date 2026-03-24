@@ -29,6 +29,18 @@ class NotificationListView(LoginRequiredMixin, ListView):
         context["unread_total"] = (
             Notification.objects.for_user(self.request.user).unread().count()
         )
+        user = self.request.user
+        for n in context["notifications"]:
+            if n.case is None:
+                n.case_accessible = True
+            elif user.role in ("admin", "reviewer"):
+                n.case_accessible = True
+            elif user.role in ("operator", "observer"):
+                n.case_accessible = (n.case.department_id == user.department_id)
+            elif user.role == "executor":
+                n.case_accessible = (n.case.responsible_user_id == user.pk)
+            else:
+                n.case_accessible = True
         return context
 
 
