@@ -115,6 +115,63 @@ class NoticeForm(forms.Form):
         return value
 
 
+class HearingProtocolForm(forms.Form):
+    hearing_date = forms.DateField(
+        label="Дата рассмотрения",
+        widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+    )
+    time_start = forms.TimeField(
+        label="Время начала (ч. мин.)",
+        widget=forms.TimeInput(attrs={"type": "time", "class": "form-control"}),
+    )
+    time_end = forms.TimeField(
+        label="Время окончания (ч. мин.)",
+        widget=forms.TimeInput(attrs={"type": "time", "class": "form-control"}),
+    )
+    official_name = forms.CharField(
+        max_length=300,
+        label="Ф.И.О. должностного лица",
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    secretary_name = forms.CharField(
+        max_length=300,
+        label="Ф.И.О. секретаря",
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    participant_info = forms.CharField(
+        label="Сведения об участнике административной процедуры",
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+    )
+    participant_position = forms.CharField(
+        label="Изложение позиции участника",
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+    )
+    signatory_name = forms.CharField(
+        max_length=300,
+        label="Ф.И.О. должностного лица (подпись)",
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    acquainted_name = forms.CharField(
+        max_length=300,
+        label="С протоколом ознакомлен (ФИО участника)",
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+
+    def __init__(self, *args, case=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.case = case
+
+    def clean_hearing_date(self):
+        value = self.cleaned_data.get("hearing_date")
+        if value and self.case and not self.case.allow_backdating:
+            min_date = self.case.created_at.date()
+            if value < min_date:
+                raise forms.ValidationError(
+                    f"Дата не может быть раньше даты создания дела ({min_date.strftime('%d.%m.%Y')})."
+                )
+        return value
+
+
 class DocumentCreateForm(forms.Form):
     doc_type = forms.ChoiceField(
         choices=DocumentType.choices,

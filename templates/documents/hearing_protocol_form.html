@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block title %}Протокол заслушивания — {{ case.case_number }} — АППК{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'cases:detail' pk=case.pk %}" class="text-decoration-none text-muted small">
+        <i class="bi bi-arrow-left"></i> Дело {{ case.case_number }}
+    </a>
+    <h4 class="mb-0 mt-1"><i class="bi bi-file-earmark-text"></i> Протокол заслушивания</h4>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    {{ msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="row g-4"
+     id="hp-root"
+     data-authority-name="{{ authority_name }}"
+     data-authority-address="{{ authority_address }}"
+     data-taxpayer-name="{{ case.taxpayer.name }}"
+     data-taxpayer-iin="{{ case.taxpayer.iin_bin }}"
+     data-min-date="{{ case_created_date }}">
+
+    {# ── Левая колонка ────────────────────────────────────────────────── #}
+    <div class="col-md-6">
+
+        {# Данные из системы #}
+        <div class="card mb-3 border-0 bg-light">
+            <div class="card-header bg-secondary bg-opacity-10 fw-semibold small border-0">
+                <i class="bi bi-database"></i> Данные из системы
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    {% for label, value in auto_fields.items %}
+                    <tr>
+                        <td class="text-muted small ps-3" style="width:38%">{{ label }}</td>
+                        <td class="small fw-semibold pe-3">{{ value }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+
+        {# Форма #}
+        <div class="card">
+            <div class="card-header fw-semibold small">
+                <i class="bi bi-pencil-square"></i> Заполните поля
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small">
+                                {{ form.hearing_date.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.hearing_date }}
+                            {% if form.hearing_date.errors %}<div class="text-danger small mt-1">{{ form.hearing_date.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small">
+                                {{ form.time_start.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.time_start }}
+                            {% if form.time_start.errors %}<div class="text-danger small mt-1">{{ form.time_start.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small">
+                                {{ form.time_end.label }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.time_end }}
+                            {% if form.time_end.errors %}<div class="text-danger small mt-1">{{ form.time_end.errors }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">
+                            {{ form.official_name.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.official_name }}
+                        {% if form.official_name.errors %}<div class="text-danger small mt-1">{{ form.official_name.errors }}</div>{% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">
+                            {{ form.secretary_name.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.secretary_name }}
+                        {% if form.secretary_name.errors %}<div class="text-danger small mt-1">{{ form.secretary_name.errors }}</div>{% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">
+                            {{ form.participant_info.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.participant_info }}
+                        {% if form.participant_info.errors %}<div class="text-danger small mt-1">{{ form.participant_info.errors }}</div>{% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">
+                            {{ form.participant_position.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.participant_position }}
+                        {% if form.participant_position.errors %}<div class="text-danger small mt-1">{{ form.participant_position.errors }}</div>{% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">
+                            {{ form.signatory_name.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.signatory_name }}
+                        {% if form.signatory_name.errors %}<div class="text-danger small mt-1">{{ form.signatory_name.errors }}</div>{% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold small">
+                            {{ form.acquainted_name.label }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.acquainted_name }}
+                        {% if form.acquainted_name.errors %}<div class="text-danger small mt-1">{{ form.acquainted_name.errors }}</div>{% endif %}
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-file-earmark-pdf"></i> Сформировать PDF
+                        </button>
+                        <a href="{% url 'cases:detail' pk=case.pk %}" class="btn btn-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+    {# ── Правая колонка: предпросмотр ────────────────────────────────── #}
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header fw-semibold small">
+                <i class="bi bi-eye"></i> Предпросмотр документа
+                <div class="mt-1 fw-normal">
+                    <small>
+                        <span style="background:#FFF59D;padding:2px 6px">Авто</span> — из системы&nbsp;&nbsp;
+                        <span style="background:#CCFF90;padding:2px 6px">Вручную</span> — вы заполняете
+                    </small>
+                </div>
+            </div>
+            <div class="card-body" style="padding:16px;">
+                <div id="preview-content"
+                     style="font-size:12px; line-height:1.6; font-family: serif;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const root          = document.getElementById('hp-root');
+    const authorityName = root.dataset.authorityName    || '[____]';
+    const authorityAddr = root.dataset.authorityAddress || '[____]';
+    const taxpayerName  = root.dataset.taxpayerName     || '[____]';
+    const taxpayerIin   = root.dataset.taxpayerIin      || '[____]';
+
+    const dateInput      = document.getElementById('id_hearing_date');
+    const timeStartInput = document.getElementById('id_time_start');
+    const timeEndInput   = document.getElementById('id_time_end');
+    const officialInput  = document.getElementById('id_official_name');
+    const secretaryInput = document.getElementById('id_secretary_name');
+    const participantInfoInput  = document.getElementById('id_participant_info');
+    const participantPosInput   = document.getElementById('id_participant_position');
+    const signatoryInput = document.getElementById('id_signatory_name');
+    const acquaintedInput= document.getElementById('id_acquainted_name');
+    const preview        = document.getElementById('preview-content');
+
+    const minDate = root.dataset.minDate;
+    if (minDate) {
+        dateInput.min = minDate;
+    }
+
+    const MONTHS_RU = [
+        '', 'января','февраля','марта','апреля','мая','июня',
+        'июля','августа','сентября','октября','ноября','декабря'
+    ];
+
+    function formatDate(val) {
+        if (!val) return '[____]';
+        const parts = val.split('-');
+        if (parts.length !== 3) return val;
+        const d = String(parseInt(parts[2], 10)).padStart(2, '0');
+        const m = parseInt(parts[1], 10);
+        const y = parts[0];
+        return '\u00ab' + d + '\u00bb ' + MONTHS_RU[m] + ' ' + y;
+    }
+
+    function fval(input) {
+        return (input.value || '').trim();
+    }
+
+    function a(text) {
+        return '<span style="background:#FFF59D;padding:0 2px">' + (text || '[____]') + '</span>';
+    }
+
+    function mv(text) {
+        return '<span style="background:#CCFF90;padding:0 2px">' + (text || '[____]') + '</span>';
+    }
+
+    function nl2br(text) {
+        return (text || '').replace(/\n/g, '<br>');
+    }
+
+    function render() {
+        const rawDate    = dateInput.value;
+        const timeStart  = fval(timeStartInput);
+        const timeEnd    = fval(timeEndInput);
+        const official   = fval(officialInput);
+        const secretary  = fval(secretaryInput);
+        const partInfo   = fval(participantInfoInput);
+        const partPos    = fval(participantPosInput);
+        const signatory  = fval(signatoryInput);
+        const acquainted = fval(acquaintedInput);
+
+        const dateParts = rawDate ? rawDate.split('-') : [];
+        const dateDay   = dateParts[2] ? String(parseInt(dateParts[2], 10)).padStart(2, '0') : '[__]';
+        const dateMonth = dateParts[1] ? MONTHS_RU[parseInt(dateParts[1], 10)] : '[____]';
+        const dateYear  = dateParts[0] || '[____]';
+
+        preview.innerHTML =
+            '<p style="text-align:center;font-weight:bold;margin-bottom:12px">Протокол заслушивания</p>' +
+
+            '<table width="100%" style="margin-bottom:10px;font-size:12px">' +
+            '<tr>' +
+            '<td style="width:50%">' + a(authorityAddr) + '<br><em>(место рассмотрения)</em></td>' +
+            '<td style="width:50%;text-align:right">' +
+            '\u00ab' + mv(dateDay) + '\u00bb ' + mv(dateMonth) + ' ' + mv(dateYear) + 'г.<br>' +
+            '<em>(дата рассмотрения)</em></td>' +
+            '</tr></table>' +
+
+            '<p><strong>Время начала рассмотрения:</strong> ' + mv(timeStart) + ' ч. мин.</p>' +
+            '<p><strong>Время окончания рассмотрения:</strong> ' + mv(timeEnd) + ' ч. мин.</p>' +
+            '<p><strong>Наименование административного органа:</strong> ' + a(authorityName) + '</p>' +
+            '<p><strong>Ф.И.О. должностного лица:</strong> ' + mv(official) + '</p>' +
+            '<p><strong>Ф.И.О. секретаря:</strong> ' + mv(secretary) + '</p>' +
+
+            '<p><strong>Сведения об участнике административной процедуры ' +
+            'и (или) ином лице, участвующем в административном деле:</strong><br>' +
+            mv(nl2br(partInfo)) + '</p>' +
+
+            '<p><strong>Содержание рассматриваемого вопроса:</strong> ' +
+            'Проведение налоговой проверки на основании решения налогового органа ' +
+            'в отношении ' + a(taxpayerName) + ' БИН/ИИН ' + a(taxpayerIin) + '.</p>' +
+
+            '<p><strong>Выступление должностного лица:</strong><br>' +
+            'В соответствии с пунктом 5 статьи 144 Предпринимательского кодекса РК...' +
+            '</p>' +
+
+            '<p><strong>Изложение позиции участника:</strong><br>' +
+            mv(nl2br(partPos)) + '</p>' +
+
+            '<table width="100%" style="margin-top:20px;font-size:12px">' +
+            '<tr>' +
+            '<td style="width:60%">' + mv(signatory) + '<br><em>(Ф.И.О. должностного лица)</em></td>' +
+            '<td style="width:40%;text-align:right">________________<br><em>(подпись)</em></td>' +
+            '</tr>' +
+            '<tr>' +
+            '<td style="padding-top:16px">' + mv(secretary) + '<br><em>(Ф.И.О. секретаря)</em></td>' +
+            '<td style="padding-top:16px;text-align:right">________________<br><em>(подпись)</em></td>' +
+            '</tr>' +
+            '</table>' +
+
+            '<p style="margin-top:20px"><strong>С протоколом заслушивания ознакомлен:</strong><br>' +
+            mv(acquainted) + '<br><em>(Ф.И.О. участника, подпись)</em></p>';
+    }
+
+    [dateInput, timeStartInput, timeEndInput, officialInput, secretaryInput,
+     participantInfoInput, participantPosInput, signatoryInput, acquaintedInput
+    ].forEach(function (el) {
+        el.addEventListener('input', render);
+        el.addEventListener('change', render);
+    });
+    render();
+})();
+</script>
+{% endblock %}

@@ -280,6 +280,80 @@ def generate_preliminary_decision(case, form_data: dict, user) -> CaseDocument:
     return doc
 
 
+@transaction.atomic
+def generate_hearing_protocol(case, form_data: dict, user) -> CaseDocument:
+    """Генерирует Протокол заслушивания."""
+    doc_type = DocumentType.HEARING_PROTOCOL
+    template = DocumentTemplate.objects.filter(doc_type=doc_type, is_active=True).first()
+    if not template:
+        raise ValueError("Активный шаблон «Протокол заслушивания» не найден.")
+
+    context = get_document_context(case)
+
+    hearing_date = form_data["hearing_date"]
+    MONTHS_RU = [
+        "", "января", "февраля", "марта", "апреля", "мая", "июня",
+        "июля", "августа", "сентября", "октября", "ноября", "декабря",
+    ]
+    context.update({
+        "hearing_date_day": hearing_date.strftime("%d"),
+        "hearing_date_month": MONTHS_RU[hearing_date.month],
+        "hearing_date_year": hearing_date.strftime("%Y"),
+        "time_start": form_data["time_start"].strftime("%H:%M"),
+        "time_end": form_data["time_end"].strftime("%H:%M"),
+        "official_name": form_data["official_name"],
+        "secretary_name": form_data["secretary_name"],
+        "participant_info": form_data["participant_info"],
+        "participant_position": form_data["participant_position"],
+        "signatory_name": form_data["signatory_name"],
+        "acquainted_name": form_data["acquainted_name"],
+        "doc_type_display": dict(DocumentType.choices).get(doc_type, doc_type),
+    })
+
+    rendered_body = _render_template_body(template.body_template, context)
+
+    from django.template.loader import render_to_string
+    html_content = render_to_string(
+        "documents/pdf/base.html",
+        {"body": rendered_body, "context": context, "doc_type_display": context["doc_type_display"]},
+    )
+
+    pdf_bytes = _render_pdf(html_content)
+    doc_number = generate_doc_number(doc_type, case)
+    file_path = _save_pdf_file(doc_number, pdf_bytes)
+
+    existing_count = CaseDocument.objects.filter(case=case, doc_type=doc_type).count()
+    doc = CaseDocument.objects.create(
+        case=case,
+        template=template,
+        doc_type=doc_type,
+        doc_number=doc_number,
+        version=existing_count + 1,
+        status=DocumentStatus.GENERATED,
+        file_path=file_path,
+        created_by=user,
+        metadata={
+            "template_version": template.version,
+            "hearing_date": str(hearing_date),
+        },
+    )
+
+    audit_log(
+        user=user,
+        action="hearing_protocol_generated",
+        entity_type="document",
+        entity_id=doc.id,
+        details={
+            "doc_number": doc_number,
+            "case_number": case.case_number,
+            "hearing_date": str(hearing_date),
+        },
+    )
+
+    logger.info("HearingProtocol generated: %s for case %s by %s", doc_number, case.case_number, user)
+    return doc
+
+
 def _render_template_body(body_template: str, context: dict) -> str:
     """Рендерит строку шаблона через Django Template engine."""
     t = Template(body_template)

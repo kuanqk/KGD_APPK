@@ -9,9 +9,9 @@ from django.views.generic import DetailView, FormView
 from apps.cases.models import AdministrativeCase, CaseStatus
 from apps.cases.services import after_return_actions
 from django.views import View
-from .forms import DocumentCreateForm, NoticeForm, PreliminaryDecisionForm, PRELIMINARY_DECISION_RISKS
+from .forms import DocumentCreateForm, NoticeForm, PreliminaryDecisionForm, HearingProtocolForm, PRELIMINARY_DECISION_RISKS
 from .models import CaseDocument, DocumentStatus, DocumentType
-from .services import create_new_version, generate_document, generate_notice, generate_preliminary_decision
+from .services import create_new_version, generate_document, generate_notice, generate_preliminary_decision, generate_hearing_protocol
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,8 @@ class DocumentCreateView(LoginRequiredMixin, FormView):
             return redirect("documents:notice_form", case_pk=self.case.pk)
         if doc_type == DocumentType.PRELIMINARY_DECISION:
             return redirect("documents:preliminary_decision_form", case_pk=self.case.pk)
+        if doc_type == DocumentType.HEARING_PROTOCOL:
+            return redirect("documents:hearing_protocol_form", case_pk=self.case.pk)
         try:
             doc = generate_document(self.case, doc_type, self.request.user)
             messages.success(self.request, f"Документ {doc.doc_number} успешно сформирован.")
@@ -297,6 +299,58 @@ class PreliminaryDecisionFormView(LoginRequiredMixin, View):
                     user=request.user,
                 )
                 messages.success(request, f"Предварительное решение {doc.doc_number} успешно сформировано.")
+                return redirect("documents:detail", pk=doc.pk)
+            except ValueError as e:
+                messages.error(request, str(e))
+        return render(request, self.template_name, self._build_context(case, form))
+
+
+class HearingProtocolFormView(LoginRequiredMixin, View):
+    """Интерактивная форма заполнения Протокола заслушивания."""
+    template_name = "documents/hearing_protocol_form.html"
+
+    def _get_case(self, request, case_pk):
+        return get_object_or_404(
+            AdministrativeCase.objects.for_user(request.user),
+            pk=case_pk,
+        )
+
+    def _build_context(self, case, form):
+        from apps.documents.services import _get_authority_details
+        details = _get_authority_details(case)
+        responsible = case.responsible_user
+        return {
+            "case": case,
+            "form": form,
+            "case_created_date": case.created_at.date().isoformat() if not case.allow_backdating else "",
+            "authority_name": details.name if details else "",
+            "authority_address": details.address if details else "",
+            "auto_fields": {
+                "Наименование органа": (details.name if details else "") or "—",
+                "Адрес органа": (details.address if details else "") or "—",
+                "Налогоплательщик": f"{case.taxpayer.name} (БИН/ИИН: {case.taxpayer.iin_bin})",
+                "Контактное лицо": responsible.get_full_name() if responsible else "—",
+            },
+        }
+
+    def get(self, request, case_pk):
+        from django.shortcuts import render
+        case = self._get_case(request, case_pk)
+        form = HearingProtocolForm(case=case)
+        return render(request, self.template_name, self._build_context(case, form))
+
+    def post(self, request, case_pk):
+        from django.shortcuts import render
+        case = self._get_case(request, case_pk)
+        form = HearingProtocolForm(case=case, data=request.POST)
+        if form.is_valid():
+            try:
+                doc = generate_hearing_protocol(
+                    case=case,
+                    form_data=form.cleaned_data,
+                    user=request.user,
+                )
+                messages.success(request, f"Протокол заслушивания {doc.doc_number} успешно сформирован.")
                 return redirect("documents:detail", pk=doc.pk)
             except ValueError as e:
                 messages.error(request, str(e))
