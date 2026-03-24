@@ -77,12 +77,21 @@ class CaseDetailView(LoginRequiredMixin, DetailView):
     template_name = "cases/detail.html"
     context_object_name = "case"
 
-    def get_queryset(self):
-        return (
-            AdministrativeCase.objects
-            .for_user(self.request.user)
-            .select_related("taxpayer", "responsible_user", "created_by")
+    def get_object(self, queryset=None):
+        case = get_object_or_404(
+            AdministrativeCase.objects.select_related("taxpayer", "responsible_user", "created_by"),
+            pk=self.kwargs["pk"],
         )
+        user = self.request.user
+        if user.role in ("admin", "reviewer"):
+            return case
+        if user.role in ("operator", "observer"):
+            if case.department != user.department:
+                raise Http404
+        if user.role == "executor":
+            if case.responsible_user != user:
+                raise Http404
+        return case
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
