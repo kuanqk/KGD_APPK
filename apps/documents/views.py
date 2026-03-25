@@ -357,6 +357,36 @@ class HearingProtocolFormView(LoginRequiredMixin, View):
         return render(request, self.template_name, self._build_context(case, form))
 
 
+class PrintPreviewView(LoginRequiredMixin, View):
+    """HTML-предпросмотр документа для печати."""
+
+    def get(self, request, pk):
+        from django.http import HttpResponse
+        from django.template.loader import render_to_string
+        from apps.documents.services import get_document_context, _render_template_body
+
+        doc = get_object_or_404(
+            CaseDocument.objects.for_user(request.user).select_related(
+                "template", "case", "case__taxpayer", "case__responsible_user"
+            ),
+            pk=pk,
+        )
+
+        body_html = ""
+        if doc.template:
+            context_data = (doc.metadata or {}).get("context_snapshot") or {}
+            if not context_data:
+                context_data = get_document_context(doc.case)
+            body_html = _render_template_body(doc.template.body_template, context_data)
+
+        html = render_to_string(
+            "documents/print_preview.html",
+            {"doc": doc, "body": body_html},
+            request=request,
+        )
+        return HttpResponse(html)
+
+
 def document_download(request, pk):
     if not request.user.is_authenticated:
         raise Http404

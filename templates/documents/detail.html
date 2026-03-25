@@ -83,9 +83,15 @@
                 {% if doc.file_path %}
                 <i class="bi bi-file-earmark-pdf text-danger" style="font-size:4rem;"></i>
                 <p class="mt-2 text-muted">{{ doc.doc_number }}.pdf</p>
-                <a href="{% url 'documents:download' pk=doc.pk %}" class="btn btn-outline-danger mt-1">
-                    <i class="bi bi-download"></i> Скачать PDF
-                </a>
+                <div class="d-flex gap-2 mt-1">
+                    <a href="{% url 'documents:download' pk=doc.pk %}" class="btn btn-outline-danger">
+                        <i class="bi bi-download"></i> Скачать PDF
+                    </a>
+                    <a href="{% url 'documents:print_preview' pk=doc.pk %}" target="_blank"
+                       class="btn btn-outline-secondary">
+                        <i class="bi bi-printer"></i> Предпросмотр для печати
+                    </a>
+                </div>
                 {% else %}
                 <p class="text-muted">Файл не сформирован.</p>
                 {% endif %}
@@ -99,6 +105,10 @@
     {% if doc.file_path %}
     <a href="{% url 'documents:download' pk=doc.pk %}" class="btn btn-outline-danger">
         <i class="bi bi-download"></i> Скачать
+    </a>
+    <a href="{% url 'documents:print_preview' pk=doc.pk %}" target="_blank"
+       class="btn btn-outline-secondary">
+        <i class="bi bi-printer"></i> Предпросмотр для печати
     </a>
     {% endif %}
 

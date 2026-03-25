@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ doc.doc_number }} — печать</title>
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: "DejaVu Sans", "Times New Roman", serif;
+            font-size: 12pt;
+            line-height: 1.4;
+            color: #000;
+            background: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .toolbar {
+            max-width: 210mm;
+            margin: 0 auto 12px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .toolbar button, .toolbar a {
+            padding: 6px 14px;
+            font-size: 13px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-print {
+            background: #0d6efd;
+            color: #fff;
+            border: none;
+        }
+
+        .btn-close-tab {
+            background: #fff;
+            color: #333;
+            border: 1px solid #ccc;
+        }
+
+        .page {
+            max-width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            background: #fff;
+            padding: 2cm 2.5cm 2cm 3cm;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .page p {
+            text-indent: 1.25cm;
+            margin: 6px 0;
+            text-align: justify;
+        }
+
+        .page p[style*="text-indent:0"],
+        .page p[style*="text-indent: 0"] {
+            text-indent: 0;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        @media print {
+            body {
+                background: #fff;
+                padding: 0;
+            }
+
+            .toolbar {
+                display: none;
+            }
+
+            .page {
+                max-width: 100%;
+                min-height: auto;
+                padding: 0;
+                box-shadow: none;
+            }
+
+            @page {
+                size: A4;
+                margin: 2cm 2.5cm 2cm 3cm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="toolbar no-print">
+    <button class="btn-print" onclick="window.print()">&#128424; Печать</button>
+    <a href="javascript:window.close()" class="btn-close-tab">✕ Закрыть</a>
+    <span style="color:#555;font-size:12px;padding:6px 4px">{{ doc.doc_number }} — {{ doc.get_doc_type_display }}</span>
+</div>
+
+<div class="page">
+    {{ body|safe }}
+</div>
+
+<script>
+    window.addEventListener('load', function () {
+        window.print();
+    });
+</script>
+
+</body>
+</html>

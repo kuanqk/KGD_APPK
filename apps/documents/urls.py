@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     DocumentCreateView, DocumentDetailView, document_download,
     InspectionActCreateView, DerRequestCreateView, NoticeFormView,
-    PreliminaryDecisionFormView, HearingProtocolFormView,
+    PreliminaryDecisionFormView, HearingProtocolFormView, PrintPreviewView,
 )
 
 app_name = "documents"
@@ -16,4 +16,5 @@ urlpatterns = [
     path("cases/<int:case_pk>/der/create/", DerRequestCreateView.as_view(), name="der_create"),
     path("<int:pk>/", DocumentDetailView.as_view(), name="detail"),
     path("<int:pk>/download/", document_download, name="download"),
+    path("<int:pk>/print/", PrintPreviewView.as_view(), name="print_preview"),
 ]
