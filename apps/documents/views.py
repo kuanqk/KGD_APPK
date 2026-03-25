@@ -374,9 +374,7 @@ class PrintPreviewView(LoginRequiredMixin, View):
 
         body_html = ""
         if doc.template:
-            context_data = (doc.metadata or {}).get("context_snapshot") or {}
-            if not context_data:
-                context_data = get_document_context(doc.case)
+            context_data = (doc.metadata or {}).get("context_snapshot") or get_document_context(doc.case)
             body_html = _render_template_body(doc.template.body_template, context_data)
 
         html = render_to_string(

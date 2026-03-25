@@ -175,7 +175,7 @@ def generate_notice(case, hearing_date, hearing_time, hearing_address: str, user
         created_by=user,
         metadata={
             "template_version": template.version,
-            "context_snapshot": {k: v for k, v in context.items()},
+            "context_snapshot": dict(context),
         },
     )
 
@@ -258,8 +258,7 @@ def generate_preliminary_decision(case, form_data: dict, user) -> CaseDocument:
         created_by=user,
         metadata={
             "template_version": template.version,
-            "risk_items": risk_items,
-            "outgoing_number": form_data["outgoing_number"],
+            "context_snapshot": dict(context),
         },
     )
 
@@ -334,7 +333,7 @@ def generate_hearing_protocol(case, form_data: dict, user) -> CaseDocument:
         created_by=user,
         metadata={
             "template_version": template.version,
-            "hearing_date": str(hearing_date),
+            "context_snapshot": dict(context),
         },
     )
 
