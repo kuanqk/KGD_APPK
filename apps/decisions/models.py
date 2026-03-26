@@ -125,3 +125,7 @@ class FinalDecision(models.Model):
     @property
     def is_tax_audit(self):
         return self.decision_type == DecisionType.TAX_AUDIT
+
+    @property
+    def basis_display(self):
+        return self.get_basis_display()

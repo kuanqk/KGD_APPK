@@ -145,12 +145,16 @@ class CaseCreateView(LoginRequiredMixin, FormView):
                 "email": data.get("taxpayer_email", ""),
             },
             region=data["region"],
-            basis=data["basis"],
+            basis=None,
             department=data.get("department"),
-            category=data.get("category", ""),
+            category=None,
             description=data.get("description", ""),
             responsible_user=data.get("responsible_user"),
         )
+        if data.get("basis"):
+            case.basis.set(data["basis"])
+        if data.get("category"):
+            case.category.set(data["category"])
         messages.success(self.request, f"Дело {case.case_number} успешно создано.")
         return redirect("cases:detail", pk=case.pk)
 

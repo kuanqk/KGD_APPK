@@ -80,14 +80,17 @@ def create_case(
         case_number=generate_case_number(department),
         taxpayer=taxpayer,
         region=region,
-        department=department,  # FK: Department instance or None
-        basis=basis,
-        category=category,
+        department=department,
         description=description,
         responsible_user=responsible_user,
         created_by=operator,
         status=CaseStatus.DRAFT,
     )
+
+    if basis:
+        case.basis.set(basis if hasattr(basis, '__iter__') else [basis])
+    if category:
+        case.category.set(category if hasattr(category, '__iter__') else [category])
 
     CaseEvent.objects.create(
         case=case,

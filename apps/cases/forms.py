@@ -51,16 +51,17 @@ class CaseCreateForm(forms.Form):
         label="Подразделение",
         empty_label="— выберите подразделение —",
     )
-    basis = forms.ModelChoiceField(
+    basis = forms.ModelMultipleChoiceField(
         queryset=CaseBasis.objects.filter(is_active=True),
         label="Основание",
-        empty_label="— выберите основание —",
+        required=True,
+        widget=forms.CheckboxSelectMultiple,
     )
-    category = forms.ModelChoiceField(
+    category = forms.ModelMultipleChoiceField(
         queryset=CaseCategory.objects.filter(is_active=True),
-        required=False,
         label="Категория",
-        empty_label="— не указана —",
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
     )
     description = forms.CharField(
         required=False,

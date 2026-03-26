@@ -114,27 +114,38 @@
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold small">Основание <span class="text-danger">*</span></label>
-                        <select name="basis" class="form-select form-select-sm{% if form.basis.errors %} is-invalid{% endif %}">
-                            {% for val, lbl in form.fields.basis.choices %}
-                            <option value="{{ val }}" {% if form.basis.value == val %}selected{% endif %}>{{ lbl }}</option>
+                        <div class="border rounded p-2" style="max-height:160px; overflow-y:auto;">
+                            {% for basis in form.fields.basis.queryset %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       name="basis" value="{{ basis.pk }}"
+                                       id="basis_{{ basis.pk }}"
+                                       {% if basis.pk|stringformat:'s' in form.basis.value|default:'' %}checked{% endif %}>
+                                <label class="form-check-label small" for="basis_{{ basis.pk }}">
+                                    {{ basis.name }}
+                                </label>
+                            </div>
                             {% endfor %}
-                        </select>
-                        {% for error in form.basis.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                        </div>
+                        {% for error in form.basis.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold small">{{ form.category.label }}</label>
-                        <select name="{{ form.category.html_name }}"
-                                class="form-select form-select-sm{% if form.category.errors %} is-invalid{% endif %}">
-                            <option value="">— не указана —</option>
+                        <div class="border rounded p-2" style="max-height:160px; overflow-y:auto;">
                             {% for cat in form.fields.category.queryset %}
-                            <option value="{{ cat.pk }}"
-                                {% if form.category.value == cat.pk|stringformat:'s' or form.category.value == cat.pk %}selected{% endif %}>
-                                {{ cat.name }}
-                            </option>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       name="category" value="{{ cat.pk }}"
+                                       id="category_{{ cat.pk }}"
+                                       {% if cat.pk|stringformat:'s' in form.category.value|default:'' %}checked{% endif %}>
+                                <label class="form-check-label small" for="category_{{ cat.pk }}">
+                                    {{ cat.name }}
+                                </label>
+                            </div>
                             {% endfor %}
-                        </select>
-                        {% for error in form.category.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                        </div>
+                        {% for error in form.category.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                     </div>
 
                     <div class="mb-3">

@@ -162,21 +162,17 @@ class AdministrativeCase(models.Model):
         related_name="created_cases",
         verbose_name="Создал",
     )
-    basis = models.ForeignKey(
+    basis = models.ManyToManyField(
         "CaseBasis",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
         related_name="cases",
         verbose_name="Основание",
-    )
-    category = models.ForeignKey(
-        "CaseCategory",
-        on_delete=models.SET_NULL,
-        null=True,
         blank=True,
+    )
+    category = models.ManyToManyField(
+        "CaseCategory",
         related_name="cases",
         verbose_name="Категория",
+        blank=True,
     )
     description = models.TextField(blank=True, verbose_name="Описание")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания", db_index=True)
@@ -225,6 +221,14 @@ class AdministrativeCase(models.Model):
 
     def __str__(self):
         return self.case_number
+
+    @property
+    def basis_display(self):
+        return ", ".join(b.name for b in self.basis.all())
+
+    @property
+    def category_display(self):
+        return ", ".join(c.name for c in self.category.all())
 
 
 class CaseEvent(models.Model):

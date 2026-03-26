@@ -92,7 +92,7 @@
                     </tr>
                     <tr>
                         <td class="text-muted">Основание</td>
-                        <td>{{ case.get_basis_display }}</td>
+                        <td>{{ case.basis_display|default:"—" }}</td>
                     </tr>
                     <tr>
                         <td class="text-muted">Регион</td>
@@ -108,7 +108,7 @@
                     </tr>
                     <tr>
                         <td class="text-muted">Категория</td>
-                        <td>{{ case.category|default:"—" }}</td>
+                        <td>{{ case.category_display|default:"—" }}</td>
                     </tr>
                     <tr>
                         <td class="text-muted">Создал</td>
@@ -489,7 +489,7 @@
                     </span>
                 </p>
                 {% if d.is_termination and d.basis %}
-                <p class="text-muted small mb-1">Основание: {{ d.get_basis_display }}</p>
+                <p class="text-muted small mb-1">Основание: {{ d.basis_display }}</p>
                 {% endif %}
                 <p class="text-muted small mb-0">
                     Составил: {{ d.created_by.get_full_name|default:d.created_by.username|default:"—" }}
