@@ -9,6 +9,15 @@ class DeliveryCreateForm(forms.Form):
         label="Способ вручения",
         widget=forms.RadioSelect,
     )
+    sent_at = forms.DateTimeField(
+        required=False,
+        label="Дата и время отправки",
+        widget=forms.DateTimeInput(
+            attrs={"type": "datetime-local"},
+            format="%Y-%m-%dT%H:%M",
+        ),
+        input_formats=["%Y-%m-%dT%H:%M"],
+    )
     tracking_number = forms.CharField(
         max_length=100,
         required=False,

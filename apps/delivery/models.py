@@ -73,6 +73,11 @@ class DeliveryRecord(models.Model):
         blank=True,
         verbose_name="Примечание",
     )
+    proof_file = models.FileField(
+        null=True, blank=True,
+        upload_to="delivery/proofs/%Y/%m/",
+        verbose_name="Файл подтверждения",
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

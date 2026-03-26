@@ -2,13 +2,16 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect
+from django.utils import timezone
+from django.views import View
 from django.views.generic import FormView, ListView, UpdateView
 
 from apps.cases.models import AdministrativeCase
 from apps.documents.models import CaseDocument
 from .forms import DeliveryCreateForm, DeliveryFilterForm, DeliveryResultForm
-from .models import DeliveryRecord
+from .models import DeliveryRecord, DeliveryStatus
 from .services import create_delivery, mark_delivered, mark_returned
 
 logger = logging.getLogger(__name__)
@@ -72,6 +75,7 @@ class DeliveryCreateView(LoginRequiredMixin, FormView):
             user=self.request.user,
             tracking_number=data.get("tracking_number", ""),
             notes=data.get("notes", ""),
+            sent_at=data.get("sent_at"),
         )
         messages.success(
             self.request,
@@ -165,3 +169,138 @@ class DeliveryListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context["filter_form"] = DeliveryFilterForm(self.request.GET)
         return context
+
+
+class DeliveryUpdateInlineView(LoginRequiredMixin, View):
+    """AJAX endpoint для инлайн-обновления статуса вручения прямо из карточки дела."""
+
+    def post(self, request, pk):
+        if request.user.role not in ("admin", "operator"):
+            return JsonResponse({"error": "Нет прав."}, status=403)
+
+        delivery = get_object_or_404(
+            DeliveryRecord.objects.for_user(request.user).select_related(
+                "case_document", "case_document__case"
+            ),
+            pk=pk,
+        )
+
+        action = request.POST.get("action")
+
+        if action == "delivered":
+            if delivery.status != DeliveryStatus.PENDING:
+                return JsonResponse({"error": "Статус уже зафиксирован."}, status=400)
+            delivered_at_str = request.POST.get("delivered_at")
+            notes = request.POST.get("notes", "")
+            if delivered_at_str:
+                from django.utils.dateparse import parse_datetime, parse_date
+                dt = parse_datetime(delivered_at_str) or (
+                    parse_date(delivered_at_str) and
+                    timezone.datetime.combine(parse_date(delivered_at_str), timezone.datetime.min.time())
+                )
+                if dt:
+                    import datetime
+                    delivery.delivered_at = timezone.make_aware(dt) if timezone.is_naive(dt) else dt
+                else:
+                    delivery.delivered_at = timezone.now()
+            else:
+                delivery.delivered_at = timezone.now()
+            delivery.status = DeliveryStatus.DELIVERED
+            delivery.result = "Вручено"
+            if notes:
+                delivery.notes = notes
+            update_fields = ["status", "delivered_at", "result"]
+            if notes:
+                update_fields.append("notes")
+
+            # Handle proof_file upload
+            if request.FILES.get("proof_file"):
+                delivery.proof_file = request.FILES["proof_file"]
+                update_fields.append("proof_file")
+
+            delivery.save(update_fields=update_fields)
+
+            # Case event + status
+            from apps.cases.models import CaseEvent, CaseEventType, CaseStatus
+            from apps.cases.services import change_case_status
+            case = delivery.case
+            CaseEvent.objects.create(
+                case=case,
+                event_type=CaseEventType.STATUS_CHANGED,
+                description=(
+                    f"Документ {delivery.case_document.doc_number} вручён НП"
+                    f" ({delivery.get_method_display()})"
+                    + (f". {notes}" if notes else "")
+                ),
+                created_by=request.user,
+            )
+            if case.status not in (
+                CaseStatus.DELIVERED, CaseStatus.HEARING_SCHEDULED,
+                CaseStatus.HEARING_DONE, CaseStatus.TERMINATED,
+                CaseStatus.COMPLETED, CaseStatus.ARCHIVED,
+            ):
+                change_case_status(case, CaseStatus.DELIVERED, request.user)
+
+            return JsonResponse({
+                "ok": True,
+                "status": delivery.status,
+                "status_display": delivery.get_status_display(),
+                "delivered_at": delivery.delivered_at.strftime("%d.%m.%Y") if delivery.delivered_at else "",
+            })
+
+        elif action == "returned":
+            if delivery.status != DeliveryStatus.PENDING:
+                return JsonResponse({"error": "Статус уже зафиксирован."}, status=400)
+            returned_at_str = request.POST.get("returned_at")
+            notes = request.POST.get("notes", "")
+            if returned_at_str:
+                from django.utils.dateparse import parse_datetime, parse_date
+                dt = parse_datetime(returned_at_str) or (
+                    parse_date(returned_at_str) and
+                    timezone.datetime.combine(parse_date(returned_at_str), timezone.datetime.min.time())
+                )
+                if dt:
+                    delivery.returned_at = timezone.make_aware(dt) if timezone.is_naive(dt) else dt
+                else:
+                    delivery.returned_at = timezone.now()
+            else:
+                delivery.returned_at = timezone.now()
+            delivery.status = DeliveryStatus.RETURNED
+            delivery.result = "Возвращено"
+            if notes:
+                delivery.notes = notes
+            update_fields = ["status", "returned_at", "result"]
+            if notes:
+                update_fields.append("notes")
+
+            if request.FILES.get("proof_file"):
+                delivery.proof_file = request.FILES["proof_file"]
+                update_fields.append("proof_file")
+
+            delivery.save(update_fields=update_fields)
+
+            from apps.cases.models import CaseEvent, CaseEventType, CaseStatus
+            from apps.cases.services import change_case_status
+            case = delivery.case
+            CaseEvent.objects.create(
+                case=case,
+                event_type=CaseEventType.STATUS_CHANGED,
+                description=(
+                    f"Почтовое отправление с документом {delivery.case_document.doc_number} возвращено"
+                    + (f". {notes}" if notes else "")
+                ),
+                created_by=request.user,
+            )
+            if case.status not in (
+                CaseStatus.TERMINATED, CaseStatus.COMPLETED, CaseStatus.ARCHIVED
+            ):
+                change_case_status(case, CaseStatus.MAIL_RETURNED, request.user)
+
+            return JsonResponse({
+                "ok": True,
+                "status": delivery.status,
+                "status_display": delivery.get_status_display(),
+                "returned_at": delivery.returned_at.strftime("%d.%m.%Y") if delivery.returned_at else "",
+            })
+
+        return JsonResponse({"error": "Неизвестное действие."}, status=400)

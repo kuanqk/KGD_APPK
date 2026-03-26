@@ -18,6 +18,7 @@ def create_delivery(
     user,
     tracking_number: str = "",
     notes: str = "",
+    sent_at=None,
 ) -> DeliveryRecord:
     """
     Создаёт запись о доставке документа.
@@ -29,7 +30,7 @@ def create_delivery(
         status=DeliveryStatus.PENDING,
         tracking_number=tracking_number,
         notes=notes,
-        sent_at=timezone.now(),
+        sent_at=sent_at or timezone.now(),
         created_by=user,
     )
 
