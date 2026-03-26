@@ -263,14 +263,16 @@
                     <th>Трек-номер</th>
                     <th>Статус</th>
                     <th>Отправлено</th>
-                    <th>Результат</th>
+                    <th>Вручено</th>
+                    <th>Дата вручения</th>
+                    <th>Файл</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
                 {% for doc in case.documents.all %}
                 {% for delivery in doc.deliveries.all %}
-                <tr>
+                <tr data-delivery-id="{{ delivery.pk }}">
                     <td>
                         <a href="{% url 'documents:detail' pk=doc.pk %}" class="text-decoration-none">
                             {{ doc.doc_number }}
@@ -295,18 +297,71 @@
                             {{ delivery.get_status_display }}
                         </span>
                     </td>
-                    <td class="text-muted small">{{ delivery.sent_at|date:"d.m.Y"|default:"—" }}</td>
-                    <td class="text-muted small">
-                        {% if delivery.delivered_at %}{{ delivery.delivered_at|date:"d.m.Y" }}
-                        {% elif delivery.returned_at %}{{ delivery.returned_at|date:"d.m.Y" }}
-                        {% else %}—{% endif %}
+                    <td class="text-muted small">{{ delivery.sent_at|date:"d.m.Y H:i"|default:"—" }}</td>
+
+                    {# Чекбокс Вручено — только для pending, только admin/operator #}
+                    <td class="text-center">
+                        {% if delivery.status == 'pending' and request.user.role in 'admin,operator' %}
+                        <input type="checkbox"
+                               class="form-check-input delivery-delivered-cb"
+                               data-id="{{ delivery.pk }}"
+                               title="Отметить как вручено">
+                        {% elif delivery.status == 'delivered' %}
+                        <span class="text-success"><i class="bi bi-check-circle-fill"></i></span>
+                        {% elif delivery.status == 'returned' %}
+                        <span class="text-danger"><i class="bi bi-x-circle-fill"></i></span>
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
                     </td>
+
+                    {# Дата вручения — инлайн input для pending, текст для остальных #}
                     <td>
                         {% if delivery.status == 'pending' and request.user.role in 'admin,operator' %}
-                        <a href="{% url 'delivery:update' pk=delivery.pk %}"
+                        <input type="date"
+                               class="form-control form-control-sm delivery-date-input"
+                               style="min-width:125px"
+                               value="{{ delivery.delivered_at|date:'Y-m-d'|default:'' }}"
+                               data-id="{{ delivery.pk }}">
+                        {% else %}
+                        <span class="text-muted small">
+                            {% if delivery.delivered_at %}{{ delivery.delivered_at|date:"d.m.Y" }}
+                            {% elif delivery.returned_at %}{{ delivery.returned_at|date:"d.m.Y" }}
+                            {% else %}—{% endif %}
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    {# Файл подтверждения #}
+                    <td>
+                        {% if delivery.proof_file %}
+                        <a href="{{ delivery.proof_file.url }}" target="_blank"
                            class="btn btn-sm btn-outline-primary py-0">
-                            Результат
+                            <i class="bi bi-paperclip"></i>
                         </a>
+                        {% elif delivery.status == 'pending' and request.user.role in 'admin,operator' %}
+                        <label class="btn btn-sm btn-outline-secondary py-0 mb-0"
+                               style="cursor:pointer"
+                               title="PDF/JPG/PNG до 2 МБ">
+                            <i class="bi bi-upload"></i>
+                            <input type="file" class="d-none delivery-file-input"
+                                   accept=".pdf,.jpg,.jpeg,.png"
+                                   data-id="{{ delivery.pk }}">
+                        </label>
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+
+                    {# Кнопка возврат — только для registered_mail pending #}
+                    <td>
+                        {% if delivery.status == 'pending' and request.user.role in 'admin,operator' %}
+                        {% if delivery.method == 'registered_mail' %}
+                        <a href="{% url 'delivery:update' pk=delivery.pk %}"
+                           class="btn btn-sm btn-outline-danger py-0">
+                            Возврат
+                        </a>
+                        {% endif %}
                         {% endif %}
                     </td>
                 </tr>
@@ -585,4 +640,58 @@
 </div>
 {% endif %}
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const CSRF = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+
+    async function deliveryPost(id, data, file) {
+        const fd = new FormData();
+        for (const [k, v] of Object.entries(data)) fd.append(k, v);
+        if (file) fd.append('proof_file', file);
+        const res = await fetch(`/delivery/${id}/update-inline/`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF },
+            body: fd,
+        });
+        const json = await res.json();
+        if (!json.ok) alert(json.error || 'Ошибка сохранения');
+        return json;
+    }
+
+    // Чекбокс "Вручено" — отправляет result_status=delivered + дату из соседнего input
+    document.querySelectorAll('.delivery-delivered-cb').forEach(cb => {
+        cb.addEventListener('change', async function() {
+            if (!this.checked) return;
+            const row = this.closest('tr');
+            const dateInput = row.querySelector('.delivery-date-input');
+            const data = { result_status: 'delivered' };
+            if (dateInput?.value) data.delivered_at = dateInput.value;
+            const res = await deliveryPost(this.dataset.id, data);
+            if (res.ok) location.reload();
+        });
+    });
+
+    // Дата вручения — сохраняется при изменении (без смены статуса)
+    document.querySelectorAll('.delivery-date-input').forEach(input => {
+        input.addEventListener('change', function() {
+            deliveryPost(this.dataset.id, { delivered_at: this.value });
+        });
+    });
+
+    // Файл подтверждения
+    document.querySelectorAll('.delivery-file-input').forEach(input => {
+        input.addEventListener('change', async function() {
+            const row = this.closest('tr');
+            const dateInput = row.querySelector('.delivery-date-input');
+            const data = {};
+            if (dateInput?.value) data.delivered_at = dateInput.value;
+            const res = await deliveryPost(this.dataset.id, data, this.files[0]);
+            if (res.ok) location.reload();
+        });
+    });
+})();
+</script>
 {% endblock %}

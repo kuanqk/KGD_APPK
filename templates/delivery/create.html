@@ -65,6 +65,18 @@
                         {% endfor %}
                     </div>
 
+                    {# Дата и время отправки #}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Дата и время отправки</label>
+                        <input type="datetime-local" name="sent_at" id="id_sent_at"
+                               value="{{ form.sent_at.value|default:'' }}"
+                               class="form-control form-control-sm{% if form.sent_at.errors %} is-invalid{% endif %}">
+                        {% for error in form.sent_at.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">По умолчанию — текущий момент</div>
+                    </div>
+
                     {# Трек-номер #}
                     <div class="mb-3" id="tracking-block">
                         <label class="form-label fw-semibold small">Трек-номер</label>
@@ -100,6 +112,17 @@
 
 {% block extra_js %}
 <script>
+    // Инициализируем sent_at текущим временем если не задано
+    (function() {
+        var el = document.getElementById('id_sent_at');
+        if (el && !el.value) {
+            var now = new Date();
+            var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+            el.value = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) +
+                       'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+        }
+    })();
+
     // Показываем/скрываем трек-номер в зависимости от метода
     document.querySelectorAll('input[name="method"]').forEach(function(radio) {
         radio.addEventListener('change', function() {
