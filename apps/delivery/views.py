@@ -185,7 +185,7 @@ class DeliveryUpdateInlineView(LoginRequiredMixin, View):
             pk=pk,
         )
 
-        action = request.POST.get("action")
+        action = request.POST.get("result_status") or request.POST.get("action")
 
         if action == "delivered":
             if delivery.status != DeliveryStatus.PENDING:
@@ -302,5 +302,24 @@ class DeliveryUpdateInlineView(LoginRequiredMixin, View):
                 "status_display": delivery.get_status_display(),
                 "returned_at": delivery.returned_at.strftime("%d.%m.%Y") if delivery.returned_at else "",
             })
+
+        # No result_status — save delivered_at and/or proof_file without changing status
+        if not action:
+            update_fields = []
+            delivered_at_str = request.POST.get("delivered_at")
+            if delivered_at_str:
+                from django.utils.dateparse import parse_date
+                dt = parse_date(delivered_at_str)
+                if dt:
+                    import datetime
+                    naive = datetime.datetime.combine(dt, datetime.time.min)
+                    delivery.delivered_at = timezone.make_aware(naive)
+                    update_fields.append("delivered_at")
+            if request.FILES.get("proof_file"):
+                delivery.proof_file = request.FILES["proof_file"]
+                update_fields.append("proof_file")
+            if update_fields:
+                delivery.save(update_fields=update_fields)
+            return JsonResponse({"ok": True})
 
         return JsonResponse({"error": "Неизвестное действие."}, status=400)
