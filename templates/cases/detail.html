@@ -106,7 +106,6 @@
                         <td class="text-muted">Ответственный</td>
                         <td>{{ case.responsible_user.get_full_name|default:case.responsible_user.username|default:"—" }}</td>
                     </tr>
-                    {% if case.case_observers.exists %}
                     <tr>
                         <td class="text-muted">Наблюдатели</td>
                         <td>
@@ -114,10 +113,18 @@
                             <span class="badge bg-light text-dark border me-1">
                                 {{ obs.get_full_name|default:obs.username }}
                             </span>
+                            {% empty %}
+                            <span class="text-muted">—</span>
                             {% endfor %}
+                            {% if request.user.role == 'admin' or request.user.role == 'operator' %}
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-sm py-0 ms-1"
+                                    data-bs-toggle="modal" data-bs-target="#modalObservers">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            {% endif %}
                         </td>
                     </tr>
-                    {% endif %}
                     <tr>
                         <td class="text-muted">Категория</td>
                         <td>{{ case.category_display|default:"—" }}</td>
@@ -651,6 +658,49 @@
     </div>
 </div>
 {% endif %}
+{% endif %}
+
+{% if request.user.role == 'admin' or request.user.role == 'operator' %}
+<div class="modal fade" id="modalObservers" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'cases:update_observers' pk=case.pk %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-eye"></i> Наблюдатели по делу
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">
+                        Наблюдатели видят дело и документы, но не могут создавать новые документы.
+                    </p>
+                    <div class="border rounded p-2" style="max-height:250px; overflow-y:auto;">
+                        {% for user in all_users %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox"
+                                   name="case_observers" value="{{ user.pk }}"
+                                   id="modal_obs_{{ user.pk }}"
+                                   {% if user in case.case_observers.all %}checked{% endif %}>
+                            <label class="form-check-label small" for="modal_obs_{{ user.pk }}">
+                                {{ user.get_full_name|default:user.username }}
+                                <span class="text-muted">({{ user.get_role_display }})</span>
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> Сохранить
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endif %}
 {% endblock %}
 

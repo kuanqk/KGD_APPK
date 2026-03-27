@@ -11,6 +11,7 @@ from django.views import View
 from django.views.generic import ListView, DetailView, FormView
 
 from django.views.generic.edit import CreateView, UpdateView
+from apps.accounts.models import User
 from .forms import CaseCreateForm, CaseFilterForm, TaxpayerImportForm, TaxAuthorityDetailsForm
 from .models import AdministrativeCase, Department, StagnationSettings, Taxpayer, TaxpayerType, Region, CaseBasis, CaseCategory, Position, TaxAuthorityDetails
 from .services import create_case, allow_backdating
@@ -100,6 +101,11 @@ class CaseDetailView(LoginRequiredMixin, DetailView):
             .select_related("created_by")
             .order_by("-created_at")[:50]
         )
+        context["all_users"] = (
+            User.objects.filter(is_active=True)
+            .exclude(role="observer")
+            .order_by("last_name", "first_name")
+        )
         # История согласований по итоговому решению дела (если есть)
         if hasattr(self.object, "final_decision"):
             from apps.approvals.services import get_history
@@ -183,6 +189,27 @@ class AllowBackdatingView(LoginRequiredMixin, View):
         except PermissionDenied as e:
             messages.error(request, str(e))
 
+        return redirect("cases:detail", pk=pk)
+
+
+class UpdateObserversView(LoginRequiredMixin, View):
+    """POST cases/<pk>/update-observers/ — обновить список наблюдателей."""
+
+    def post(self, request, pk):
+        if request.user.role not in ("admin", "operator"):
+            raise Http404
+
+        case = get_object_or_404(
+            AdministrativeCase.objects.for_user(request.user),
+            pk=pk,
+        )
+
+        observer_ids = request.POST.getlist("case_observers")
+        case.case_observers.set(
+            User.objects.filter(pk__in=observer_ids, is_active=True)
+        )
+
+        messages.success(request, "Список наблюдателей обновлён.")
         return redirect("cases:detail", pk=pk)
 
 
