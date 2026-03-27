@@ -44,9 +44,8 @@ class KZValidator:
         seventh = digits[6]
         if 1 <= seventh <= 6:
             return cls.validate_iin(number, digits)
-        if 4 <= seventh <= 7:
-            return cls.validate_bin(number, digits)
-        return ValidationResult(valid=False, error="unknown_type")
+        # Всё что не ИИН — БИН (7-я цифра 0,4,5,6,7 и другие)
+        return cls.validate_bin(number, digits)
 
     @classmethod
     def validate_iin(cls, number: str, digits: list) -> ValidationResult:
@@ -91,15 +90,17 @@ class KZValidator:
 
         try:
             reg_date = date(year, month, day)
+            reg_date_str = reg_date.strftime("%d.%m.%Y")
         except ValueError:
-            return ValidationResult(valid=False, error="invalid_registration_date")
+            # Некоторые БИН госорганов и НКО имеют нестандартную дату — принимаем как валидный
+            reg_date_str = None
 
         return ValidationResult(
             valid=True,
             type="BIN",
             value=number,
             metadata={
-                "registration_date": reg_date.strftime("%d.%m.%Y"),
+                "registration_date": reg_date_str,
             },
         )
 
