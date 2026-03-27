@@ -165,6 +165,12 @@ class ProtocolCreateView(LoginRequiredMixin, FormView):
 
         return super().dispatch(request, *args, **kwargs)
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        if self.request.method == 'POST':
+            kwargs['files'] = self.request.FILES
+        return kwargs
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["hearing"] = self.hearing
@@ -177,6 +183,12 @@ class ProtocolCreateView(LoginRequiredMixin, FormView):
                 result_summary=form.cleaned_data["result_summary"],
                 user=self.request.user,
             )
+            # Сохранить загруженные файлы
+            for field in ('signed_protocol_file', 'identity_doc_file', 'power_of_attorney_file'):
+                f = form.cleaned_data.get(field)
+                if f:
+                    setattr(protocol, field, f)
+            protocol.save()
             messages.success(
                 self.request,
                 f"Протокол {protocol.protocol_number} оформлен. "

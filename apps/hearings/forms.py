@@ -61,3 +61,41 @@ class ProtocolCreateForm(forms.Form):
             "placeholder": "Опишите ход заседания и принятые решения...",
         }),
     )
+    signed_protocol_file = forms.FileField(
+        required=False,
+        label='Подписанный протокол НП',
+        help_text='PDF, JPG или PNG, до 5 МБ',
+        widget=forms.FileInput(attrs={'accept': '.pdf,.jpg,.jpeg,.png'}),
+    )
+    identity_doc_file = forms.FileField(
+        required=False,
+        label='Удостоверение личности',
+        help_text='PDF, JPG или PNG, до 5 МБ',
+        widget=forms.FileInput(attrs={'accept': '.pdf,.jpg,.jpeg,.png'}),
+    )
+    power_of_attorney_file = forms.FileField(
+        required=False,
+        label='Доверенность на участие',
+        help_text='PDF, JPG или PNG, до 5 МБ (если представитель)',
+        widget=forms.FileInput(attrs={'accept': '.pdf,.jpg,.jpeg,.png'}),
+    )
+
+    def clean_signed_protocol_file(self):
+        return self._validate_file('signed_protocol_file')
+
+    def clean_identity_doc_file(self):
+        return self._validate_file('identity_doc_file')
+
+    def clean_power_of_attorney_file(self):
+        return self._validate_file('power_of_attorney_file')
+
+    def _validate_file(self, field_name):
+        import os
+        f = self.cleaned_data.get(field_name)
+        if f:
+            if f.size > 5 * 1024 * 1024:
+                raise forms.ValidationError('Файл не должен превышать 5 МБ.')
+            ext = os.path.splitext(f.name)[1].lower()
+            if ext not in ('.pdf', '.jpg', '.jpeg', '.png'):
+                raise forms.ValidationError('Допустимые форматы: PDF, JPG, PNG.')
+        return f

@@ -33,7 +33,7 @@
                     {% endif %}
                 </table>
 
-                <form method="post">
+                <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
 
                     <div class="mb-4">
@@ -46,6 +46,51 @@
                         {% for e in form.result_summary.errors %}
                         <div class="invalid-feedback">{{ e }}</div>
                         {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-paperclip"></i> Подтверждающие документы
+                        </label>
+                        <div class="text-muted small mb-2">
+                            Загрузите сканы/фото документов подтверждающих ознакомление НП с протоколом
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label small">Подписанный протокол НП</label>
+                            <input type="file" name="signed_protocol_file"
+                                   class="form-control form-control-sm{% if form.signed_protocol_file.errors %} is-invalid{% endif %}"
+                                   accept=".pdf,.jpg,.jpeg,.png">
+                            {% for e in form.signed_protocol_file.errors %}
+                            <div class="invalid-feedback">{{ e }}</div>
+                            {% endfor %}
+                            <div class="form-text">PDF, JPG или PNG, до 5 МБ</div>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label small">Удостоверение личности</label>
+                            <input type="file" name="identity_doc_file"
+                                   class="form-control form-control-sm{% if form.identity_doc_file.errors %} is-invalid{% endif %}"
+                                   accept=".pdf,.jpg,.jpeg,.png">
+                            {% for e in form.identity_doc_file.errors %}
+                            <div class="invalid-feedback">{{ e }}</div>
+                            {% endfor %}
+                            <div class="form-text">PDF, JPG или PNG, до 5 МБ</div>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label small">
+                                Доверенность на участие
+                                <span class="text-muted">(если представитель)</span>
+                            </label>
+                            <input type="file" name="power_of_attorney_file"
+                                   class="form-control form-control-sm{% if form.power_of_attorney_file.errors %} is-invalid{% endif %}"
+                                   accept=".pdf,.jpg,.jpeg,.png">
+                            {% for e in form.power_of_attorney_file.errors %}
+                            <div class="invalid-feedback">{{ e }}</div>
+                            {% endfor %}
+                            <div class="form-text">PDF, JPG или PNG, до 5 МБ</div>
+                        </div>
                     </div>
 
                     <div class="d-flex gap-2">

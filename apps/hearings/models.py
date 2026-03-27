@@ -112,6 +112,21 @@ class HearingProtocol(models.Model):
         blank=True,
         verbose_name="Путь к файлу протокола",
     )
+    signed_protocol_file = models.FileField(
+        null=True, blank=True,
+        upload_to='hearings/protocols/%Y/%m/',
+        verbose_name='Подписанный протокол',
+    )
+    identity_doc_file = models.FileField(
+        null=True, blank=True,
+        upload_to='hearings/protocols/%Y/%m/',
+        verbose_name='Удостоверение личности',
+    )
+    power_of_attorney_file = models.FileField(
+        null=True, blank=True,
+        upload_to='hearings/protocols/%Y/%m/',
+        verbose_name='Доверенность',
+    )
     deadline_2days = models.DateField(
         null=True,
         blank=True,
