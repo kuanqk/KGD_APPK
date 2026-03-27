@@ -98,7 +98,7 @@
                     </div>
 
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary" id="submit-btn">
                             <i class="bi bi-send"></i> Зафиксировать отправку
                         </button>
                         <a href="{% url 'cases:detail' pk=case.pk %}" class="btn btn-secondary">Отмена</a>
@@ -135,6 +135,36 @@
     if (checked) {
         document.getElementById('tracking-block').style.display =
             checked.value === 'registered_mail' ? 'block' : 'none';
+    }
+
+    // Валидация выбора документа перед отправкой
+    document.getElementById('submit-btn').addEventListener('click', function(e) {
+        var docSelect = document.querySelector('select[name="document_id"]');
+        if (docSelect && !docSelect.value) {
+            e.preventDefault();
+            var existing = document.getElementById('doc-error-msg');
+            if (!existing) {
+                var msg = document.createElement('div');
+                msg.id = 'doc-error-msg';
+                msg.className = 'alert alert-danger mt-2 py-2';
+                msg.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Пожалуйста, выберите документ перед отправкой.';
+                docSelect.closest('.mb-3').appendChild(msg);
+            }
+            docSelect.focus();
+            return;
+        }
+        // Убрать сообщение если документ выбран
+        var existing = document.getElementById('doc-error-msg');
+        if (existing) existing.remove();
+    });
+
+    // Убирать ошибку при выборе документа
+    var docSelect = document.querySelector('select[name="document_id"]');
+    if (docSelect) {
+        docSelect.addEventListener('change', function() {
+            var existing = document.getElementById('doc-error-msg');
+            if (existing) existing.remove();
+        });
     }
 </script>
 {% endblock %}
