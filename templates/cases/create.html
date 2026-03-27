@@ -161,6 +161,25 @@
                     </div>
 
                     <div class="mb-3">
+                        <label class="form-label fw-semibold small">Наблюдатели</label>
+                        <div class="border rounded p-2" style="max-height:160px; overflow-y:auto;">
+                            {% for user in form.fields.case_observers.queryset %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       name="case_observers" value="{{ user.pk }}"
+                                       id="observer_{{ user.pk }}"
+                                       {% if user.pk|stringformat:'s' in form.case_observers.value|default:'' %}checked{% endif %}>
+                                <label class="form-check-label small" for="observer_{{ user.pk }}">
+                                    {{ user.get_full_name|default:user.username }}
+                                    <span class="text-muted">({{ user.get_role_display }})</span>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="form-text text-muted">Видят дело и документы, но не создают новые документы</div>
+                    </div>
+
+                    <div class="mb-3">
                         <label class="form-label fw-semibold small">Описание</label>
                         <textarea name="description" rows="3" class="form-control form-control-sm">{{ form.description.value|default:'' }}</textarea>
                     </div>

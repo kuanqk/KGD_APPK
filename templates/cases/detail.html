@@ -106,6 +106,18 @@
                         <td class="text-muted">Ответственный</td>
                         <td>{{ case.responsible_user.get_full_name|default:case.responsible_user.username|default:"—" }}</td>
                     </tr>
+                    {% if case.case_observers.exists %}
+                    <tr>
+                        <td class="text-muted">Наблюдатели</td>
+                        <td>
+                            {% for obs in case.case_observers.all %}
+                            <span class="badge bg-light text-dark border me-1">
+                                {{ obs.get_full_name|default:obs.username }}
+                            </span>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% endif %}
                     <tr>
                         <td class="text-muted">Категория</td>
                         <td>{{ case.category_display|default:"—" }}</td>

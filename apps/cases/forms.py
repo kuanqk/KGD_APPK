@@ -74,6 +74,13 @@ class CaseCreateForm(forms.Form):
         label="Ответственный",
         empty_label="— не назначен —",
     )
+    case_observers = forms.ModelMultipleChoiceField(
+        queryset=User.objects.filter(is_active=True).exclude(role="observer"),
+        required=False,
+        label="Наблюдатели",
+        help_text="Видят дело и документы, но не могут создавать новые документы",
+        widget=forms.CheckboxSelectMultiple,
+    )
 
     def clean_iin_bin(self):
         value = self.cleaned_data["iin_bin"].strip()

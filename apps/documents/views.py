@@ -25,6 +25,13 @@ class DocumentCreateView(LoginRequiredMixin, FormView):
             AdministrativeCase.objects.for_user(request.user),
             pk=kwargs["case_pk"],
         )
+        is_observer_only = (
+            self.case.case_observers.filter(pk=request.user.pk).exists()
+            and request.user.role not in ("admin", "operator", "reviewer")
+        )
+        if is_observer_only:
+            messages.error(request, "Наблюдатели не могут создавать документы.")
+            return redirect("cases:detail", pk=self.case.pk)
         if request.user.role not in ("admin", "operator"):
             messages.error(request, "У вас нет прав для создания документов.")
             return redirect("cases:detail", pk=self.case.pk)

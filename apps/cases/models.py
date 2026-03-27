@@ -101,13 +101,21 @@ class CaseQuerySet(models.QuerySet):
         if user.role in ("admin", "reviewer"):
             return self
         if user.role == "executor":
-            return self.filter(responsible_user=user)
-        # operator, observer — фильтр по офису; fallback на регион если офис не задан
+            # Видит свои дела + дела где назначен наблюдателем
+            return self.filter(
+                models.Q(responsible_user=user) | models.Q(case_observers=user)
+            ).distinct()
+        # operator, observer — фильтр по офису + дела где назначен наблюдателем
         if user.department_id:
-            return self.filter(department=user.department)
+            return self.filter(
+                models.Q(department=user.department) | models.Q(case_observers=user)
+            ).distinct()
         if user.region:
-            return self.filter(region__name=user.region)
-        return self.none()
+            return self.filter(
+                models.Q(region__name=user.region) | models.Q(case_observers=user)
+            ).distinct()
+        # Если нет офиса/региона — только дела где наблюдатель
+        return self.filter(case_observers=user).distinct()
 
 
 class AdministrativeCase(models.Model):
@@ -154,6 +162,13 @@ class AdministrativeCase(models.Model):
         blank=True,
         related_name="responsible_cases",
         verbose_name="Ответственный",
+    )
+    case_observers = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name="observed_cases",
+        verbose_name="Наблюдатели",
+        help_text="Могут просматривать дело и документы, но не создавать новые",
     )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

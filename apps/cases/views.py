@@ -155,6 +155,8 @@ class CaseCreateView(LoginRequiredMixin, FormView):
             case.basis.set(data["basis"])
         if data.get("category"):
             case.category.set(data["category"])
+        if data.get("case_observers"):
+            case.case_observers.set(data["case_observers"])
         messages.success(self.request, f"Дело {case.case_number} успешно создано.")
         return redirect("cases:detail", pk=case.pk)
 
