@@ -54,7 +54,7 @@ collectstatic:
 
 # Деплой на сервер
 deploy:
-	@ssh root@91.243.71.139 'cd /opt/KGD_APPK && git pull && docker compose restart web'
+	@ssh root@91.243.71.139 'cd /opt/KGD_APPK && git pull && docker compose restart web worker beat'
 
 # Режим обслуживания
 maintenance-on:

@@ -17,7 +17,7 @@ git push
 # На сервере
 cd /opt/KGD_APPK
 git pull
-docker compose restart web
+docker compose restart web worker beat
 ```
 
 ## Деплой с миграциями
@@ -31,7 +31,7 @@ git push
 cd /opt/KGD_APPK
 git pull
 docker compose run --rm web python manage.py migrate
-docker compose restart web
+docker compose restart web worker beat
 ```
 
 ## С maintenance mode
@@ -46,7 +46,7 @@ make maintenance-off
 ```bash
 docker compose run --rm web python manage.py makemigrations --merge --no-input
 docker compose run --rm web python manage.py migrate
-docker compose restart web
+docker compose restart web worker beat
 ```
 
 ## Git commit messages (English)

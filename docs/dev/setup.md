@@ -19,14 +19,14 @@ docker compose exec web python manage.py createsuperuser
 ## Первый запуск после migrate
 ```bash
 # 1. Создать офисы в Django Admin
-# http://localhost/admin/cases/department/
+# http://localhost:8000/admin/cases/department/
 # Коды 01-20, наименования подразделений
 
 # 2. Назначить офисы пользователям
-# http://localhost/users/ → Редактировать → поле Подразделение
+# http://localhost:8000/users/ → Редактировать → поле Подразделение
 
 # 3. Настроить порог застывших дел
-# http://localhost/admin/cases/stagnationsettings/
+# http://localhost:8000/admin/cases/stagnationsettings/
 # stagnation_days (default 30), notify_reviewer
 ```
 

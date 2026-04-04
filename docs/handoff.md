@@ -93,7 +93,7 @@ templates/         # все HTML шаблоны (не внутри apps)
 docs/
 ├── architecture/  # overview, models, urls
 ├── apps/          # документация каждого приложения
-├── dev/           # setup, workflow, conventions, claude_prompts
+├── dev/           # onboarding, setup, workflow, conventions, claude_prompts
 ├── ops/           # deploy, backup
 └── business/      # flow, roles
 ```
@@ -109,16 +109,17 @@ git commit -m "feat(...): описание"
 git push
 
 # На сервере (без миграций)
-cd /opt/KGD_APPK && git pull && docker compose restart web
+cd /opt/KGD_APPK && git pull && docker compose restart web worker beat
 
 # На сервере (с миграциями)
 cd /opt/KGD_APPK && git pull && \
 docker compose run --rm web python manage.py migrate && \
-docker compose restart web
+docker compose restart web worker beat
 
 # Конфликт миграций
 docker compose run --rm web python manage.py makemigrations --merge --no-input && \
-docker compose run --rm web python manage.py migrate
+docker compose run --rm web python manage.py migrate && \
+docker compose restart web worker beat
 ```
 
 ---
@@ -147,6 +148,7 @@ docs/architecture/overview.md ← стек, сервисы, структура
 docs/architecture/models.md   ← все модели данных
 docs/architecture/urls.md     ← все URL-маршруты
 docs/apps/<appname>.md        ← документация конкретного приложения
+docs/dev/onboarding.md        ← онбординг ~15 мин (ссылки на setup и архитектуру)
 docs/dev/setup.md             ← как запустить локально
 docs/dev/workflow.md          ← как деплоить
 docs/dev/conventions.md       ← соглашения по коду

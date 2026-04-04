@@ -10,22 +10,24 @@
 ```bash
 cd /opt/KGD_APPK
 git pull
-docker compose restart web
+docker compose restart web worker beat
 ```
+
+После изменений в **коде Celery-задач** (`apps/*/tasks.py`, `services.py`, вызываемых из worker) без перезапуска **`worker`** воркер продолжит старую логику. Для правок в **расписании** Beat — перезапуск **`beat`**.
 
 ## Деплой с миграциями
 ```bash
 cd /opt/KGD_APPK
 git pull
 docker compose run --rm web python manage.py migrate
-docker compose restart web
+docker compose restart web worker beat
 ```
 
 ## Makefile команды
 ```bash
 make up              # поднять все сервисы
 make down            # остановить
-make deploy          # git pull + restart web
+make deploy          # git pull + restart web worker beat
 make migrate         # применить миграции
 make maintenance-on  # включить режим обслуживания
 make maintenance-off # выключить режим обслуживания
@@ -46,7 +48,7 @@ git push
 cd /opt/KGD_APPK
 git pull
 docker compose run --rm web python manage.py migrate  # если есть миграции
-docker compose restart web
+docker compose restart web worker beat
 
 # Локально
 make maintenance-off
@@ -58,13 +60,14 @@ ssh root@91.243.71.139 'cd /opt/KGD_APPK && \
   chmod -R 777 apps/*/migrations && \
   docker compose run --rm web python manage.py makemigrations --merge --no-input && \
   docker compose run --rm web python manage.py migrate'
-docker compose restart web
+docker compose restart web worker beat
 ```
 
 ## Просмотр логов
 ```bash
 docker compose logs -f web     # логи приложения
-docker compose logs -f worker  # логи Celery
+docker compose logs -f worker  # логи Celery worker
+docker compose logs -f beat    # логи Celery Beat (расписание)
 docker compose logs -f db      # логи PostgreSQL
 ```
 

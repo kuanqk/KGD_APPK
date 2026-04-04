@@ -7,7 +7,7 @@
 
 ## Views
 - Только class-based views
-- `LoginRequiredMixin` первым в цепочке наследования
+- `LoginRequiredMixin` первым в цепочке наследования; при необходимости проверки прав — `PermissionRequiredMixin` / `UserPassesTestMixin` после него
 - Бизнес-логика только в `services.py`, не во views
 
 ## URL-имена
@@ -82,4 +82,4 @@ docker compose run --rm web python manage.py makemigrations --merge --no-input
 | Удаление signed документов | ТЗ запрещает |
 | `print()` | Только `logging.getLogger(__name__)` |
 | Хардкод статусов строками | Только TextChoices |
-| `\n` в Celery задачах | Вместо них отдельные Paragraph |
+| Мутация из Celery без `audit_log` | Аудит обязателен и для фоновых действий, где это применимо |

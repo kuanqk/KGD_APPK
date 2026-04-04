@@ -23,7 +23,7 @@
 - **Backend**: Python 3.11, Django 4.2
 - **База данных**: PostgreSQL 15
 - **Очереди задач**: Celery + Redis
-- **Веб-сервер**: Gunicorn + Nginx
+- **Веб-сервер**: Gunicorn (в Docker образе `web` на порту **8000**). Отдельный Nginx при необходимости ставится **вне** этого `docker-compose` (например на проде перед приложением)
 - **PDF**: xhtml2pdf (без системных зависимостей, поддержка кириллицы через DejaVu)
 - **Excel**: openpyxl (экспорт отчётов + импорт НП)
 - **Контейнеризация**: Docker Compose
@@ -40,18 +40,25 @@
 
 ### Логика for_user() (изоляция данных)
 
+Нужен `from django.db.models import Q`. Ниже — актуальная логика (наблюдатели по делу `case_observers` учитываются). Подробности: [`docs/apps/cases.md`](apps/cases.md), реализация в `apps/cases/models.py`.
+
 ```python
 def for_user(self, user):
     if user.role in ("admin", "reviewer"):
-        return self                          # всё
+        return self
     if user.role == "executor":
-        return self.filter(responsible_user=user)
-    # operator, observer — по офису; fallback на регион
+        return self.filter(
+            Q(responsible_user=user) | Q(case_observers=user)
+        ).distinct()
     if user.department_id:
-        return self.filter(department=user.department)
+        return self.filter(
+            Q(department=user.department) | Q(case_observers=user)
+        ).distinct()
     if user.region:
-        return self.filter(region=user.region)
-    return self.none()
+        return self.filter(
+            Q(region__name=user.region) | Q(case_observers=user)
+        ).distinct()
+    return self.filter(case_observers=user).distinct()
 ```
 
 ## Формат номеров документов
@@ -91,24 +98,24 @@ docker compose up -d
 docker compose exec web python manage.py migrate
 docker compose exec web python manage.py createsuperuser
 
-# 5. Открыть браузер
-# http://localhost/         — основное приложение (дашборд)
-# http://localhost/admin/   — Django Admin
+# 5. Открыть браузер (порт проброшен из docker-compose)
+# http://localhost:8000/         — основное приложение (дашборд)
+# http://localhost:8000/admin/   — Django Admin
 ```
 
 ### Первый запуск — обязательные шаги после migrate
 
 ```bash
 # Шаг 1: Создать офисы (подразделения)
-# Открыть: http://localhost/admin/cases/department/
+# Открыть: http://localhost:8000/admin/cases/department/
 # Добавить офисы с кодами 01–20 и наименованиями
 
 # Шаг 2: Назначить офисы пользователям
-# Открыть: http://localhost/users/ → Редактировать каждого пользователя
+# Открыть: http://localhost:8000/users/ → Редактировать каждого пользователя
 # Поле "Подразделение" — выбрать соответствующий офис
 
 # Шаг 3: Настроить порог застывших дел
-# Открыть: http://localhost/admin/cases/stagnationsettings/
+# Открыть: http://localhost:8000/admin/cases/stagnationsettings/
 # Установить stagnation_days (по умолчанию 30) и notify_reviewer
 ```
 
@@ -151,7 +158,8 @@ KGD_APPK/
 │   ├── approvals/      # Механизм согласования (ApprovalFlow)
 │   ├── notifications/  # Уведомления и Celery-задачи
 │   ├── reports/        # Отчёты и экспорт PDF/XLSX
-│   └── audit/          # Лог системных действий
+│   ├── audit/          # Лог системных действий
+│   └── feedback/       # Обратная связь (пилот)
 ├── config/
 │   ├── settings/
 │   │   ├── base.py     # Общие настройки
@@ -171,6 +179,8 @@ KGD_APPK/
 
 ## Разработка
 
+Онбординг за один проход: [`docs/dev/onboarding.md`](dev/onboarding.md).
+
 ### Полезные команды
 
 ```bash
@@ -180,6 +190,7 @@ docker compose up db redis -d
 # Просмотр логов
 docker compose logs -f web
 docker compose logs -f worker
+docker compose logs -f beat
 
 # Открыть shell Django
 docker compose exec web python manage.py shell_plus
@@ -213,6 +224,8 @@ docker compose exec web celery -A config call notifications.tasks.check_stagnant
 | `audit` | Иммутабельный лог действий | `models.py`, `middleware.py` |
 
 ## Celery Beat расписание
+
+Расписание задаётся в `config/settings/base.py` (`CELERY_BEAT_SCHEDULE`). Процесс **`celery beat`** запускается отдельным сервисом **`beat`** в `docker-compose.yml` (периодические задачи не выполнятся, если `beat` остановлен).
 
 | Задача | Расписание | Описание |
 |--------|-----------|----------|

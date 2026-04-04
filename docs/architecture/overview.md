@@ -9,7 +9,7 @@
 - Backend: Python 3.11, Django 4.2, PostgreSQL 15
 - Очереди: Celery + Redis
 - Frontend: Django Templates (server-side rendering)
-- Инфра: Docker Compose (web, db, redis, worker, backup)
+- Инфра: Docker Compose (web, db, redis, worker, beat, backup)
 - PDF: xhtml2pdf + DejaVu шрифт (кириллица)
 - Excel: openpyxl
 
@@ -19,7 +19,8 @@
 | web | custom (gunicorn) | Django-приложение, 3 воркера |
 | db | postgres:15-alpine | База данных |
 | redis | redis:7-alpine | Брокер Celery + кэш |
-| worker | custom (celery) | Фоновые задачи |
+| worker | custom (celery) | Исполнение Celery-задач |
+| beat | custom (celery beat) | Расписание периодических задач (`CELERY_BEAT_SCHEDULE`) |
 | backup | postgres:15-alpine | Бэкап БД в 02:00 |
 
 ## Celery Beat расписание
@@ -56,5 +57,6 @@ apps/
 ```
 Префиксы документов: `ИЗВ` · `ПРД` · `АКТ` · `ДЭР` · `ПРТ` · `ПРК` · `ВНП`
 
-Последовательность хранится в `Department.doc_sequence + Department.seq_year`.
+Последовательность документов: `Department.doc_sequence` + `Department.seq_year`.
+Номера дел: `Department.case_sequence` + `Department.case_seq_year`.
 Обновление атомарно через `select_for_update()`.
