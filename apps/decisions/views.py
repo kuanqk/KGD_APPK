@@ -43,7 +43,7 @@ class TerminationCreateView(LoginRequiredMixin, FormView):
     form_class = TerminationCreateForm
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role not in ("admin", "operator"):
+        if request.user.role not in ("admin", "operator", "reviewer"):
             messages.error(request, "У вас нет прав для создания решений.")
             return redirect("cases:list")
 
@@ -94,7 +94,7 @@ class TaxAuditCreateView(LoginRequiredMixin, FormView):
     form_class = TaxAuditCreateForm
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role not in ("admin", "operator"):
+        if request.user.role not in ("admin", "operator", "reviewer"):
             messages.error(request, "У вас нет прав для создания решений.")
             return redirect("cases:list")
 
@@ -156,7 +156,7 @@ class DecisionDetailView(LoginRequiredMixin, DetailView):
         context["can_archive"] = (
             self.object.status == DecisionStatus.APPROVED
             and self.object.case.status in ("terminated", "audit_approved", "completed")
-            and self.request.user.role in ("admin", "operator")
+            and self.request.user.role in ("admin", "operator", "reviewer")
         )
         from apps.approvals.services import get_history
         context["approval_history"] = get_history(self.object)

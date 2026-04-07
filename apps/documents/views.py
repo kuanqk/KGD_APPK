@@ -32,7 +32,7 @@ class DocumentCreateView(LoginRequiredMixin, FormView):
         if is_observer_only:
             messages.error(request, "Наблюдатели не могут создавать документы.")
             return redirect("cases:detail", pk=self.case.pk)
-        if request.user.role not in ("admin", "operator"):
+        if request.user.role not in ("admin", "operator", "reviewer"):
             messages.error(request, "У вас нет прав для создания документов.")
             return redirect("cases:detail", pk=self.case.pk)
         return super().dispatch(request, *args, **kwargs)
@@ -72,11 +72,11 @@ class DocumentDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context["can_create_new_version"] = (
             self.object.status == DocumentStatus.SIGNED
-            and self.request.user.role in ("admin", "operator")
+            and self.request.user.role in ("admin", "operator", "reviewer")
         )
         context["can_delete"] = (
             self.object.is_deletable
-            and self.request.user.role in ("admin", "operator")
+            and self.request.user.role in ("admin", "operator", "reviewer")
         )
         return context
 
@@ -103,7 +103,7 @@ class InspectionActCreateView(LoginRequiredMixin, FormView):
     form_class = DocumentCreateForm
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role not in ("admin", "operator"):
+        if request.user.role not in ("admin", "operator", "reviewer"):
             messages.error(request, "У вас нет прав для создания документов.")
             return redirect("cases:list")
 
@@ -152,7 +152,7 @@ class DerRequestCreateView(LoginRequiredMixin, FormView):
     form_class = DocumentCreateForm
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role not in ("admin", "operator"):
+        if request.user.role not in ("admin", "operator", "reviewer"):
             messages.error(request, "У вас нет прав для создания документов.")
             return redirect("cases:list")
 

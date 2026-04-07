@@ -17,7 +17,7 @@ class HearingScheduleView(LoginRequiredMixin, FormView):
     form_class = HearingScheduleForm
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role not in ("admin", "operator"):
+        if request.user.role not in ("admin", "operator", "reviewer"):
             messages.error(request, "У вас нет прав для назначения заслушиваний.")
             return redirect("cases:list")
 
@@ -75,12 +75,12 @@ class HearingDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context["can_complete"] = (
             self.object.status == HearingStatus.SCHEDULED
-            and self.request.user.role in ("admin", "operator")
+            and self.request.user.role in ("admin", "operator", "reviewer")
         )
         context["can_create_protocol"] = (
             self.object.status == HearingStatus.COMPLETED
             and not self.object.has_protocol
-            and self.request.user.role in ("admin", "operator")
+            and self.request.user.role in ("admin", "operator", "reviewer")
         )
         try:
             context["protocol"] = self.object.protocol
@@ -107,7 +107,7 @@ class HearingCompleteView(LoginRequiredMixin, FormView):
     form_class = ProtocolCreateForm  # пустая форма — просто подтверждение
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role not in ("admin", "operator"):
+        if request.user.role not in ("admin", "operator", "reviewer"):
             messages.error(request, "У вас нет прав.")
             return redirect("cases:list")
 
@@ -146,7 +146,7 @@ class ProtocolCreateView(LoginRequiredMixin, FormView):
     form_class = ProtocolCreateForm
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role not in ("admin", "operator"):
+        if request.user.role not in ("admin", "operator", "reviewer"):
             messages.error(request, "У вас нет прав для оформления протокола.")
             return redirect("cases:list")
 

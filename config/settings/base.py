@@ -7,7 +7,14 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "change-me-in-production")
 
 DEBUG = False
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get("ALLOWED_HOSTS", "").split(",") if h.strip()]
+
+# Django 4+: для POST по HTTPS Origin должен быть в списке (иначе 403 CSRF).
+CSRF_TRUSTED_ORIGINS = [
+    o.strip()
+    for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if o.strip()
+]
 
 DJANGO_APPS = [
     "django.contrib.admin",

@@ -39,7 +39,7 @@
     {% endif %}
 
     {# Кнопки действий при возврате почтового отправления #}
-    {% if request.user.role == 'admin' or request.user.role == 'operator' %}
+    {% if request.user.role == 'admin' or request.user.role == 'operator' or request.user.role == 'reviewer' %}
     {% if case.status == 'mail_returned' or case.status == 'act_created' or case.status == 'der_sent' %}
     <div class="d-flex gap-2 align-items-center">
         <span class="text-muted small me-1">Ветка возврата:</span>
@@ -194,7 +194,7 @@
 <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span class="fw-semibold"><i class="bi bi-file-earmark-text"></i> Процессуальные документы</span>
-        {% if request.user.role == 'admin' or request.user.role == 'operator' %}
+        {% if request.user.role == 'admin' or request.user.role == 'operator' or request.user.role == 'reviewer' %}
         <a href="{% url 'documents:create' case_pk=case.pk %}" class="btn btn-sm btn-outline-primary">
             <i class="bi bi-plus-lg"></i> Сформировать документ
         </a>
@@ -398,7 +398,7 @@
 <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span class="fw-semibold"><i class="bi bi-calendar-event"></i> Заслушивание</span>
-        {% if request.user.role == 'admin' or request.user.role == 'operator' %}
+        {% if request.user.role == 'admin' or request.user.role == 'operator' or request.user.role == 'reviewer' %}
         {% if case.status == 'delivered' or case.status == 'mail_returned' or case.status == 'act_created' or case.status == 'der_sent' %}
         <a href="{% url 'hearings:schedule' case_pk=case.pk %}" class="btn btn-sm btn-outline-primary">
             <i class="bi bi-calendar-plus"></i> Назначить заслушивание
@@ -464,7 +464,7 @@
         <p class="text-muted p-3 mb-0">
             Заслушиваний нет.
             {% if case.status == 'delivered' or case.status == 'mail_returned' or case.status == 'act_created' or case.status == 'der_sent' %}
-            {% if request.user.role == 'admin' or request.user.role == 'operator' %}
+            {% if request.user.role == 'admin' or request.user.role == 'operator' or request.user.role == 'reviewer' %}
             <a href="{% url 'hearings:schedule' case_pk=case.pk %}">Назначить заслушивание</a>
             {% endif %}
             {% endif %}
@@ -480,7 +480,7 @@
     <div class="card-header d-flex justify-content-between align-items-center">
         <span class="fw-semibold"><i class="bi bi-gavel"></i> Итоговое решение</span>
         {% if case.status == 'protocol_created' and not case.final_decision %}
-        {% if request.user.role == 'admin' or request.user.role == 'operator' %}
+        {% if request.user.role == 'admin' or request.user.role == 'operator' or request.user.role == 'reviewer' %}
         <div class="d-flex gap-2">
             <a href="{% url 'decisions:terminate' case_pk=case.pk %}" class="btn btn-sm btn-outline-danger">
                 <i class="bi bi-x-circle"></i> Прекратить дело
@@ -530,7 +530,7 @@
         <div class="alert alert-danger mt-2 mb-0 py-2">
             <i class="bi bi-exclamation-triangle"></i>
             Отклонено. {{ d.rejection_comment }}
-            {% if request.user.role == 'admin' or request.user.role == 'operator' %}
+            {% if request.user.role == 'admin' or request.user.role == 'operator' or request.user.role == 'reviewer' %}
             — Создайте новое решение:
             <a href="{% url 'decisions:terminate' case_pk=case.pk %}" class="btn btn-sm btn-outline-danger ms-1">Прекратить</a>
             <a href="{% url 'decisions:tax_audit' case_pk=case.pk %}" class="btn btn-sm btn-outline-primary ms-1">Проверка</a>
@@ -541,8 +541,10 @@
         {% else %}
         <p class="text-muted mb-0">
             Решение не создано.
-            {% if case.status == 'protocol_created' and request.user.role == 'admin' or request.user.role == 'operator' %}
+            {% if case.status == 'protocol_created' %}
+            {% if request.user.role == 'admin' or request.user.role == 'operator' or request.user.role == 'reviewer' %}
             Выберите сценарий завершения дела выше.
+            {% endif %}
             {% endif %}
         </p>
         {% endif %}

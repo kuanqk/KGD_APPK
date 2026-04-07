@@ -126,7 +126,7 @@ class CaseCreateView(LoginRequiredMixin, FormView):
     form_class = CaseCreateForm
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role not in ("admin", "operator"):
+        if request.user.role not in ("admin", "operator", "reviewer"):
             messages.error(request, "У вас нет прав для создания дел.")
             return redirect("cases:list")
         return super().dispatch(request, *args, **kwargs)
