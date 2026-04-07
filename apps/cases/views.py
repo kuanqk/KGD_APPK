@@ -196,7 +196,7 @@ class UpdateObserversView(LoginRequiredMixin, View):
     """POST cases/<pk>/update-observers/ — обновить список наблюдателей."""
 
     def post(self, request, pk):
-        if request.user.role not in ("admin", "operator"):
+        if request.user.role not in ("admin", "operator", "reviewer"):
             raise Http404
 
         case = get_object_or_404(
@@ -228,7 +228,7 @@ class TaxpayerImportView(LoginRequiredMixin, View):
     template_name = "cases/taxpayer_import.html"
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role not in ("admin", "operator"):
+        if request.user.role not in ("admin", "operator", "reviewer"):
             raise Http404
         return super().dispatch(request, *args, **kwargs)
 

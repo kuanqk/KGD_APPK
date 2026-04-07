@@ -26,7 +26,7 @@
                     <a class="nav-link" href="{% url 'cases:list' %}"><i class="bi bi-folder2"></i> Дела</a>
                 </li>
                 {% endif %}
-                {% if user.role == 'admin' or user.role == 'operator' %}
+                {% if user.role == 'admin' or user.role == 'operator' or user.role == 'reviewer' %}
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'delivery:list' %}"><i class="bi bi-send"></i> Вручение</a>
                 </li>

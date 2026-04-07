@@ -22,7 +22,7 @@ class DeliveryCreateView(LoginRequiredMixin, FormView):
     form_class = DeliveryCreateForm
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role not in ("admin", "operator"):
+        if request.user.role not in ("admin", "operator", "reviewer"):
             messages.error(request, "У вас нет прав для создания записей о доставке.")
             return redirect("cases:list")
 
@@ -89,7 +89,7 @@ class DeliveryUpdateView(LoginRequiredMixin, FormView):
     form_class = DeliveryResultForm
 
     def dispatch(self, request, *args, **kwargs):
-        if request.user.role not in ("admin", "operator"):
+        if request.user.role not in ("admin", "operator", "reviewer"):
             messages.error(request, "У вас нет прав для обновления записей о доставке.")
             return redirect("cases:list")
 
@@ -175,7 +175,7 @@ class DeliveryUpdateInlineView(LoginRequiredMixin, View):
     """AJAX endpoint для инлайн-обновления статуса вручения прямо из карточки дела."""
 
     def post(self, request, pk):
-        if request.user.role not in ("admin", "operator"):
+        if request.user.role not in ("admin", "operator", "reviewer"):
             return JsonResponse({"error": "Нет прав."}, status=403)
 
         delivery = get_object_or_404(
