@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Статистика обратной связи — АППК{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-bar-chart-line"></i> Статистика обратной связи</h4>
+    <a href="{% url 'feedback:list' %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-list"></i> К списку
+    </a>
+</div>
+
+{# ——— Счётчики ——— #}
+<div class="row g-3 mb-4">
+    <div class="col-sm-4">
+        <div class="card text-center border-0 bg-light">
+            <div class="card-body py-3">
+                <div class="fs-2 fw-bold">{{ total }}</div>
+                <div class="text-muted small">Всего отзывов</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="card text-center border-0 bg-warning bg-opacity-25">
+            <div class="card-body py-3">
+                <div class="fs-2 fw-bold text-warning">{{ open_count }}</div>
+                <div class="text-muted small">Открытых</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="card text-center border-0 bg-success bg-opacity-25">
+            <div class="card-body py-3">
+                <div class="fs-2 fw-bold text-success">{{ resolved_count }}</div>
+                <div class="text-muted small">Исправлено</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ——— Графики ——— #}
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header py-2 fw-semibold small">По типу</div>
+            <div class="card-body d-flex align-items-center justify-content-center" style="min-height:200px">
+                <canvas id="chartType"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header py-2 fw-semibold small">По статусу</div>
+            <div class="card-body d-flex align-items-center justify-content-center" style="min-height:200px">
+                <canvas id="chartStatus"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header py-2 fw-semibold small">По приоритету</div>
+            <div class="card-body d-flex align-items-center justify-content-center" style="min-height:200px">
+                <canvas id="chartPriority"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header py-2 fw-semibold small">По неделям</div>
+            <div class="card-body" style="min-height:220px">
+                <canvas id="chartWeekly"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+const palette = ["#4e73df","#1cc88a","#36b9cc","#f6c23e","#e74a3b","#858796"];
+
+function pie(id, labels, data) {
+    new Chart(document.getElementById(id), {
+        type: "doughnut",
+        data: { labels, datasets: [{ data, backgroundColor: palette, borderWidth: 1 }] },
+        options: { plugins: { legend: { position: "bottom" } }, maintainAspectRatio: false },
+    });
+}
+
+pie("chartType",     {{ type_labels|safe }},     {{ type_data|safe }});
+pie("chartStatus",   {{ status_labels|safe }},   {{ status_data|safe }});
+pie("chartPriority", {{ priority_labels|safe }}, {{ priority_data|safe }});
+
+new Chart(document.getElementById("chartWeekly"), {
+    type: "bar",
+    data: {
+        labels: {{ week_labels|safe }},
+        datasets: [{
+            label: "Отзывов",
+            data: {{ week_data|safe }},
+            backgroundColor: "#4e73df99",
+            borderColor: "#4e73df",
+            borderWidth: 1,
+        }]
+    },
+    options: {
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+        plugins: { legend: { display: false } },
+        maintainAspectRatio: false,
+    },
+});
+</script>
+{% endblock %}
