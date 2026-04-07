@@ -123,6 +123,18 @@ window.FEEDBACK_CONTEXT = {
     </a>
     {% endif %}
 
+    {# ——— Кнопки вручения: показываем для admin/operator/reviewer если документ не отменён ——— #}
+    {% if doc.status != 'cancelled' and request.user.role in 'admin,operator,reviewer' %}
+    <a href="{% url 'delivery:create' case_pk=doc.case.pk %}?document_id={{ doc.pk }}&method=in_person"
+       class="btn btn-outline-success">
+        <i class="bi bi-person-check"></i> Вручить нарочно
+    </a>
+    <a href="{% url 'delivery:create' case_pk=doc.case.pk %}?document_id={{ doc.pk }}&method=registered_mail"
+       class="btn btn-outline-primary">
+        <i class="bi bi-envelope"></i> Отправить письмом
+    </a>
+    {% endif %}
+
     {% if can_create_new_version %}
     <form method="post">
         {% csrf_token %}

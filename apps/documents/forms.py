@@ -55,33 +55,19 @@ class PreliminaryDecisionForm(forms.Form):
             )
 
     def clean_period_from(self):
-        value = self.cleaned_data.get("period_from")
-        if value and self.case and not self.case.allow_backdating:
-            min_date = self.case.created_at.date()
-            if value < min_date:
-                raise forms.ValidationError(
-                    f"Дата не может быть раньше даты создания дела ({min_date.strftime('%d.%m.%Y')})."
-                )
-        return value
+        return self.cleaned_data.get("period_from")
 
     def clean_period_to(self):
-        value = self.cleaned_data.get("period_to")
-        if value and self.case and not self.case.allow_backdating:
-            min_date = self.case.created_at.date()
-            if value < min_date:
-                raise forms.ValidationError(
-                    f"Дата не может быть раньше даты создания дела ({min_date.strftime('%d.%m.%Y')})."
-                )
-        return value
+        return self.cleaned_data.get("period_to")
 
     def clean(self):
         cleaned = super().clean()
-        has_risk = any(
-            cleaned.get(f"risk_{key}")
-            for key, _ in PRELIMINARY_DECISION_RISKS
-        )
-        if not has_risk:
-            raise forms.ValidationError("Необходимо отметить хотя бы один риск.")
+        period_from = cleaned.get("period_from")
+        period_to = cleaned.get("period_to")
+        if period_from and period_to and period_from > period_to:
+            raise forms.ValidationError(
+                "Дата начала периода не может быть позже даты окончания."
+            )
         return cleaned
 
 
@@ -105,14 +91,7 @@ class NoticeForm(forms.Form):
         self.case = case
 
     def clean_hearing_date(self):
-        value = self.cleaned_data.get("hearing_date")
-        if value and self.case and not self.case.allow_backdating:
-            min_date = self.case.created_at.date()
-            if value < min_date:
-                raise forms.ValidationError(
-                    f"Дата не может быть раньше даты создания дела ({min_date.strftime('%d.%m.%Y')})."
-                )
-        return value
+        return self.cleaned_data.get("hearing_date")
 
 
 class HearingProtocolForm(forms.Form):
@@ -162,14 +141,7 @@ class HearingProtocolForm(forms.Form):
         self.case = case
 
     def clean_hearing_date(self):
-        value = self.cleaned_data.get("hearing_date")
-        if value and self.case and not self.case.allow_backdating:
-            min_date = self.case.created_at.date()
-            if value < min_date:
-                raise forms.ValidationError(
-                    f"Дата не может быть раньше даты создания дела ({min_date.strftime('%d.%m.%Y')})."
-                )
-        return value
+        return self.cleaned_data.get("hearing_date")
 
 
 class DocumentCreateForm(forms.Form):
