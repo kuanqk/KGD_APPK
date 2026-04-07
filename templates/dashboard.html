@@ -120,7 +120,7 @@
                     </td>
                     <td class="small">{{ case.taxpayer.name }}</td>
                     <td class="small text-muted">{{ case.department.code|default:"—" }}</td>
-                    <td class="small">{{ case.responsible_user.get_full_name|default:case.responsible_user.username|default:"—" }}</td>
+                    <td class="small">{% if case.responsible_user %}{{ case.responsible_user.get_full_name|default:case.responsible_user.username }}{% else %}—{% endif %}</td>
                     <td><span class="badge bg-secondary">{{ case.get_status_display }}</span></td>
                     <td class="text-end">
                         <span class="badge bg-danger">{{ case.days_stagnant.days }} дн</span>

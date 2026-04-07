@@ -25,8 +25,8 @@
      data-deputy-name="{{ deputy_name }}"
      data-taxpayer="{{ case.taxpayer.name }} ({{ case.taxpayer.iin_bin }})"
      data-case-number="{{ case.case_number }}"
-     data-responsible="{{ case.responsible_user.get_full_name|default:'' }}"
-     data-phone="{{ case.responsible_user.phone|default:'' }}"
+     data-responsible="{% if case.responsible_user %}{{ case.responsible_user.get_full_name }}{% endif %}"
+     data-phone="{% if case.responsible_user %}{{ case.responsible_user.phone|default:'' }}{% endif %}"
      data-min-date="{{ case_created_date }}">
 
     {# ── Левая колонка ───────────────────────────────────────────────── #}

@@ -27,8 +27,8 @@
      data-taxpayer-name="{{ case.taxpayer.name }}"
      data-taxpayer-iin="{{ case.taxpayer.iin_bin }}"
      data-taxpayer-address="{{ case.taxpayer.address|default:'' }}"
-     data-responsible-name="{{ case.responsible_user.get_full_name|default:'' }}"
-     data-responsible-phone="{{ case.responsible_user.phone|default:'' }}"
+     data-responsible-name="{% if case.responsible_user %}{{ case.responsible_user.get_full_name }}{% endif %}"
+     data-responsible-phone="{% if case.responsible_user %}{{ case.responsible_user.phone|default:'' }}{% endif %}"
      data-min-date="{{ case_created_date }}">
 
     {# ── Левая колонка ───────────────────────────────────────────────── #}

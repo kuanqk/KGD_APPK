@@ -113,7 +113,7 @@
                     <td>{{ case.taxpayer.name }}</td>
                     <td class="text-monospace">{{ case.taxpayer.iin_bin }}</td>
                     <td>{{ case.region }}</td>
-                    <td>{{ case.responsible_user.get_full_name|default:case.responsible_user.username|default:"—" }}</td>
+                    <td>{% if case.responsible_user %}{{ case.responsible_user.get_full_name|default:case.responsible_user.username }}{% else %}—{% endif %}</td>
                     <td class="text-muted small">{{ case.created_at|date:"d.m.Y" }}</td>
                     <td>
                         {% with days=case.days_stagnant.days %}

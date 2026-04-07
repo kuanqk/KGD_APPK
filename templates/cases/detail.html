@@ -26,7 +26,7 @@
         {% if case.allow_backdating %}
         <span class="badge bg-success">
             <i class="bi bi-clock-history"></i> Ввод задним числом разрешён —
-            {{ case.backdating_allowed_by.get_full_name|default:case.backdating_allowed_by.username }}
+            {% if case.backdating_allowed_by %}{{ case.backdating_allowed_by.get_full_name|default:case.backdating_allowed_by.username }}{% else %}—{% endif %}
             {{ case.backdating_allowed_at|date:"d.m.Y H:i" }}
         </span>
         {% else %}
@@ -104,7 +104,7 @@
                     </tr>
                     <tr>
                         <td class="text-muted">Ответственный</td>
-                        <td>{{ case.responsible_user.get_full_name|default:case.responsible_user.username|default:"—" }}</td>
+                        <td>{% if case.responsible_user %}{{ case.responsible_user.get_full_name|default:case.responsible_user.username }}{% else %}—{% endif %}</td>
                     </tr>
                     <tr>
                         <td class="text-muted">Наблюдатели</td>
@@ -131,7 +131,7 @@
                     </tr>
                     <tr>
                         <td class="text-muted">Создал</td>
-                        <td>{{ case.created_by.get_full_name|default:case.created_by.username|default:"—" }}</td>
+                        <td>{% if case.created_by %}{{ case.created_by.get_full_name|default:case.created_by.username }}{% else %}—{% endif %}</td>
                     </tr>
                     <tr>
                         <td class="text-muted">Дата создания</td>
