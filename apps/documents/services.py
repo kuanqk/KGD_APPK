@@ -221,12 +221,21 @@ def generate_preliminary_decision(case, form_data: dict, user) -> CaseDocument:
             comment = (form_data.get(f"risk_{key}_comment") or "").strip()
             risk_items.append({"label": label, "comment": comment})
 
+    criteria = []
+    for i in range(1, 4):
+        if form_data.get(f"criterion_{i}_enabled"):
+            criteria.append({
+                "index": i,
+                "text": (form_data.get(f"criterion_{i}_text") or "").strip(),
+            })
+
     context.update({
         "outgoing_number": form_data["outgoing_number"],
         "period_from": period_from.strftime("%d.%m.%Y"),
         "period_to": period_to.strftime("%d.%m.%Y"),
         "risk_items": risk_items,
         "risk_other_comment": (form_data.get("risk_other_comment") or "").strip(),
+        "criteria": criteria,
         "criterion_1_text": (form_data.get("criterion_1_text") or "").strip(),
         "criterion_2_text": (form_data.get("criterion_2_text") or "").strip(),
         "criterion_3_text": (form_data.get("criterion_3_text") or "").strip(),
@@ -306,6 +315,7 @@ def generate_hearing_protocol(case, form_data: dict, user) -> CaseDocument:
         "participant_position": form_data["participant_position"],
         "signatory_name": form_data["signatory_name"],
         "acquainted_name": form_data["acquainted_name"],
+        "decision_text": (form_data.get("decision_text") or "").strip(),
         "doc_type_display": dict(DocumentType.choices).get(doc_type, doc_type),
     })
 

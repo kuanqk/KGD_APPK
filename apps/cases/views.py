@@ -6,7 +6,8 @@ from django.db.models import DurationField, ExpressionWrapper, F, Q
 from django.db.models.functions import Now
 from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
+from django.utils.html import format_html
 from django.views import View
 from django.views.generic import ListView, DetailView, FormView
 
@@ -163,8 +164,17 @@ class CaseCreateView(LoginRequiredMixin, FormView):
             case.category.set(data["category"])
         if data.get("case_observers"):
             case.case_observers.set(data["case_observers"])
-        messages.success(self.request, f"Дело {case.case_number} успешно создано.")
-        return redirect("cases:detail", pk=case.pk)
+        case_url = reverse("cases:detail", kwargs={"pk": case.pk})
+        messages.success(
+            self.request,
+            format_html(
+                'Дело <strong>{}</strong> успешно создано. '
+                '<a href="{}" class="alert-link">Открыть дело →</a>',
+                case.case_number,
+                case_url,
+            ),
+        )
+        return redirect("cases:list")
 
 
 class AllowBackdatingView(LoginRequiredMixin, View):

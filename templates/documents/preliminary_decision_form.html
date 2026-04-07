@@ -98,18 +98,40 @@
                     {# Критерии #}
                     <div class="fw-semibold small mb-2">
                         <i class="bi bi-list-ol"></i> Критерии
+                        <span class="text-muted fw-normal">(отметьте включаемые)</span>
                     </div>
-                    <div class="mb-2">
-                        <label class="form-label small text-muted">1. несоответствие КНН к среднеотраслевому значению</label>
-                        <input type="text" class="form-control form-control-sm" id="id_criterion_1_text" name="criterion_1_text" placeholder="уточните значение">
+                    <div class="mb-2 border rounded p-2" id="crit-block-1">
+                        <div class="form-check">
+                            {{ form.criterion_1_enabled }}
+                            <label class="form-check-label small" for="{{ form.criterion_1_enabled.id_for_label }}">
+                                1. несоответствие КНН к среднеотраслевому значению
+                            </label>
+                        </div>
+                        <div class="mt-1 ps-4" id="crit-text-wrap-1" style="display:none">
+                            {{ form.criterion_1_text }}
+                        </div>
                     </div>
-                    <div class="mb-2">
-                        <label class="form-label small text-muted">2. минимизация налоговых обязательств за период</label>
-                        <input type="text" class="form-control form-control-sm" id="id_criterion_2_text" name="criterion_2_text" placeholder="уточните период">
+                    <div class="mb-2 border rounded p-2" id="crit-block-2">
+                        <div class="form-check">
+                            {{ form.criterion_2_enabled }}
+                            <label class="form-check-label small" for="{{ form.criterion_2_enabled.id_for_label }}">
+                                2. минимизация налоговых обязательств за период
+                            </label>
+                        </div>
+                        <div class="mt-1 ps-4" id="crit-text-wrap-2" style="display:none">
+                            {{ form.criterion_2_text }}
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label small text-muted">3. несоответствие сумм убытков</label>
-                        <input type="text" class="form-control form-control-sm" id="id_criterion_3_text" name="criterion_3_text" placeholder="уточните сумму">
+                    <div class="mb-3 border rounded p-2" id="crit-block-3">
+                        <div class="form-check">
+                            {{ form.criterion_3_enabled }}
+                            <label class="form-check-label small" for="{{ form.criterion_3_enabled.id_for_label }}">
+                                3. несоответствие сумм убытков
+                            </label>
+                        </div>
+                        <div class="mt-1 ps-4" id="crit-text-wrap-3" style="display:none">
+                            {{ form.criterion_3_text }}
+                        </div>
                     </div>
 
                     {# Риски #}
@@ -184,16 +206,13 @@
     const outgoingInput   = document.getElementById('id_outgoing_number');
     const periodFromInput = document.getElementById('id_period_from');
     const periodToInput   = document.getElementById('id_period_to');
+    const crit1Check      = document.getElementById('id_criterion_1_enabled');
     const crit1Input      = document.getElementById('id_criterion_1_text');
+    const crit2Check      = document.getElementById('id_criterion_2_enabled');
     const crit2Input      = document.getElementById('id_criterion_2_text');
+    const crit3Check      = document.getElementById('id_criterion_3_enabled');
     const crit3Input      = document.getElementById('id_criterion_3_text');
     const preview         = document.getElementById('preview-content');
-
-    const minDate = root.dataset.minDate;
-    if (minDate) {
-        periodFromInput.min = minDate;
-        periodToInput.min = minDate;
-    }
 
     // All risks; last one (other) is rendered separately
     const riskData = [
@@ -233,9 +252,25 @@
         const outgoing   = fval(outgoingInput);
         const periodFrom = formatDate(periodFromInput.value);
         const periodTo   = formatDate(periodToInput.value);
-        const crit1      = fval(crit1Input);
-        const crit2      = fval(crit2Input);
-        const crit3      = fval(crit3Input);
+
+        // Build selected criteria list
+        const criteriaRows = [
+            { check: crit1Check, input: crit1Input, label: '1. несоответствие коэффициента налоговой нагрузки к среднеотраслевому значению' },
+            { check: crit2Check, input: crit2Input, label: '2. минимизация налоговых обязательств путем представления дополнительных форм налоговой отчетности с уменьшением сумм исчисленных налогов, в том числе за ранее проверенный период' },
+            { check: crit3Check, input: crit3Input, label: '3. несоответствие сумм убытков, переносимых на последующие периоды' },
+        ];
+        let criteriaHtml = '';
+        criteriaRows.forEach(function(cr) {
+            if (cr.check && cr.check.checked) {
+                const detail = fval(cr.input);
+                criteriaHtml += '<p>' + mv(esc(cr.label));
+                if (detail) criteriaHtml += ' ' + mv(esc(detail));
+                criteriaHtml += ';</p>';
+            }
+        });
+        if (!criteriaHtml) {
+            criteriaHtml = '<p style="color:#999">[Выберите хотя бы один критерий]</p>';
+        }
 
         // Collect named risks (exclude "other")
         const checkedRisks = [];
@@ -281,13 +316,8 @@
             ' связанных с налогообложением за период с ' + mv(periodFrom) + ' года по ' + mv(periodTo) +
             ' года по основным критериям:</p>' +
 
-            // 4. Три критерия
-            '<p>1. несоответствие коэффициента налоговой нагрузки к среднеотраслевому значению ' +
-            mv(esc(crit1)) + ';</p>' +
-            '<p>2. минимизация налоговых обязательств путем представления дополнительных форм' +
-            ' налоговой отчетности с уменьшением сумм исчисленных налогов, в том числе за ранее' +
-            ' проверенный период ' + mv(esc(crit2)) + ';</p>' +
-            '<p>3. несоответствие сумм убытков, переносимых на последующие периоды ' + mv(esc(crit3)) + '.</p>' +
+            // 4. Выбранные критерии
+            criteriaHtml +
 
             // 5. Риски — вступление
             '<p>Вместе с тем, установлены риски нарушений несоблюдения налогового' +
@@ -306,7 +336,7 @@
             ' в течение всего проверяемого периода и требуют оценки полноты, достоверности' +
             ' и корректности формирования налоговой базы в целом.</p>' +
 
-            '<p>Пунктом 3 статьи 190 Налогового кодекса определено, что налоговый учет' +
+            '<p>Пунктом 3 статьи 202 Налогового кодекса определено, что налоговый учет' +
             ' основывается на данных бухгалтерского учета. Согласно Закону Республики Казахстан' +
             ' от 28 февраля 2007 года \u2116 234 \u00ab О бухгалтерском учете и финансовой' +
             ' отчетности\u00bb бухгалтерская документация включает в себя первичные документы,' +
@@ -348,6 +378,17 @@
         cb.addEventListener('change', function() { syncWrap(); render(); });
         const commentEl = document.getElementById(r.commentId);
         if (commentEl) commentEl.addEventListener('input', render);
+    });
+
+    // Criteria toggle visibility + render
+    [[crit1Check, 'crit-text-wrap-1'], [crit2Check, 'crit-text-wrap-2'], [crit3Check, 'crit-text-wrap-3']].forEach(function(pair) {
+        const cb = pair[0];
+        const wrapId = pair[1];
+        if (!cb) return;
+        const wrap = document.getElementById(wrapId);
+        function syncCrit() { if (wrap) wrap.style.display = cb.checked ? 'block' : 'none'; }
+        syncCrit();
+        cb.addEventListener('change', function() { syncCrit(); render(); });
     });
 
     outgoingInput.addEventListener('input', render);

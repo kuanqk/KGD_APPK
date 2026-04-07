@@ -35,6 +35,46 @@ class PreliminaryDecisionForm(forms.Form):
         widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}),
     )
 
+    criterion_1_enabled = forms.BooleanField(
+        required=False,
+        label="Включить критерий 1",
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+    criterion_1_text = forms.CharField(
+        required=False,
+        label="",
+        widget=forms.TextInput(attrs={
+            "class": "form-control form-control-sm",
+            "placeholder": "уточните значение КНН",
+        }),
+    )
+    criterion_2_enabled = forms.BooleanField(
+        required=False,
+        label="Включить критерий 2",
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+    criterion_2_text = forms.CharField(
+        required=False,
+        label="",
+        widget=forms.TextInput(attrs={
+            "class": "form-control form-control-sm",
+            "placeholder": "уточните период",
+        }),
+    )
+    criterion_3_enabled = forms.BooleanField(
+        required=False,
+        label="Включить критерий 3",
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+    criterion_3_text = forms.CharField(
+        required=False,
+        label="",
+        widget=forms.TextInput(attrs={
+            "class": "form-control form-control-sm",
+            "placeholder": "уточните сумму убытков",
+        }),
+    )
+
     def __init__(self, *args, case=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.case = case
@@ -134,6 +174,15 @@ class HearingProtocolForm(forms.Form):
         max_length=300,
         label="С протоколом ознакомлен (ФИО участника)",
         widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    decision_text = forms.CharField(
+        required=False,
+        label="Принятое решение по итогам заслушивания",
+        widget=forms.Textarea(attrs={
+            "class": "form-control",
+            "rows": 3,
+            "placeholder": "Изложите принятое решение (прекращение, назначение проверки и т.д.)",
+        }),
     )
 
     def __init__(self, *args, case=None, **kwargs):
