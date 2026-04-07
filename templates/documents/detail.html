@@ -2,6 +2,17 @@
 
 {% block title %}{{ doc.doc_number }} — АППК{% endblock %}
 
+{% block feedback_meta %}
+<script>
+window.FEEDBACK_CONTEXT = {
+    entity_type: "document",
+    entity_id: {{ doc.pk }},
+    entity_label: "Документ {{ doc.doc_number }}",
+    case_number: "{{ doc.case.case_number }}"
+};
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="mb-3">
     <a href="{% url 'cases:detail' pk=doc.case.pk %}" class="text-decoration-none text-muted small">

@@ -2,6 +2,17 @@
 
 {% block title %}Решение по делу {{ decision.case.case_number }} — АППК{% endblock %}
 
+{% block feedback_meta %}
+<script>
+window.FEEDBACK_CONTEXT = {
+    entity_type: "decision",
+    entity_id: {{ decision.pk }},
+    entity_label: "Решение по делу {{ decision.case.case_number }}",
+    case_number: "{{ decision.case.case_number }}"
+};
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="mb-3">
     <a href="{% url 'cases:detail' pk=decision.case.pk %}" class="text-decoration-none text-muted small">

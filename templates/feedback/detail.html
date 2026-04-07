@@ -69,9 +69,71 @@
                         </a>
                     </dd>
                     {% endif %}
+
+                    {% if fb.page_url %}
+                    <dt class="col-sm-4 text-muted">Страница</dt>
+                    <dd class="col-sm-8 text-break">
+                        <a href="{{ fb.page_url }}" target="_blank" class="text-decoration-none small font-monospace">
+                            {{ fb.page_url|truncatechars:70 }}
+                        </a>
+                        {% if fb.page_title %}
+                        <div class="text-muted" style="font-size:.75rem">{{ fb.page_title }}</div>
+                        {% endif %}
+                    </dd>
+                    {% endif %}
+
+                    {% if fb.user_agent %}
+                    <dt class="col-sm-4 text-muted">Браузер</dt>
+                    <dd class="col-sm-8 small text-muted text-break">{{ fb.user_agent|truncatechars:120 }}</dd>
+                    {% endif %}
                 </dl>
             </div>
         </div>
+
+        {# ——— Блок контекста (entity, JS-ошибки) ——— #}
+        {% if fb.context %}
+        <div class="card mt-3">
+            <div class="card-header py-2 fw-semibold small">
+                <i class="bi bi-cpu"></i> Технический контекст
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0 small">
+                    <tbody>
+                        {% if fb.context.entity_type %}
+                        <tr>
+                            <td class="text-muted ps-3" style="width:35%">Объект</td>
+                            <td>
+                                {{ fb.context.entity_type }}
+                                {% if fb.context.entity_id %}#{{ fb.context.entity_id }}{% endif %}
+                                {% if fb.context.entity_label %} — {{ fb.context.entity_label }}{% endif %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% if fb.context.screen %}
+                        <tr>
+                            <td class="text-muted ps-3">Экран</td>
+                            <td>{{ fb.context.screen }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if fb.context.js_errors %}
+                        <tr class="table-danger">
+                            <td class="text-muted ps-3">JS-ошибки</td>
+                            <td>
+                                {% for err in fb.context.js_errors %}
+                                <div class="font-monospace" style="font-size:.72rem">
+                                    <span class="text-danger fw-semibold">{{ err.msg|truncatechars:120 }}</span>
+                                    {% if err.src %}<span class="text-muted"> @ {{ err.src|truncatechars:60 }}:{{ err.line }}</span>{% endif %}
+                                    {% if err.stack %}<div class="text-muted" style="white-space:pre-wrap;font-size:.68rem">{{ err.stack|truncatechars:400 }}</div>{% endif %}
+                                </div>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
 
         <div class="card">
             <div class="card-header py-2 fw-semibold">Описание</div>

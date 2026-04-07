@@ -63,6 +63,26 @@ class Feedback(models.Model):
         blank=True,
         verbose_name="Вложение",
     )
+    page_url = models.CharField(
+        max_length=500,
+        blank=True,
+        verbose_name="URL страницы",
+    )
+    page_title = models.CharField(
+        max_length=300,
+        blank=True,
+        verbose_name="Заголовок страницы",
+    )
+    user_agent = models.CharField(
+        max_length=500,
+        blank=True,
+        verbose_name="Браузер",
+    )
+    context = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Контекст",
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата")
     resolved_at = models.DateTimeField(
         null=True,

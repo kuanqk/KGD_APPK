@@ -2,6 +2,16 @@
 
 {% block title %}Направить документ — {{ case.case_number }} — АППК{% endblock %}
 
+{% block feedback_meta %}
+<script>
+window.FEEDBACK_CONTEXT = {
+    entity_type: "delivery",
+    entity_label: "Вручение документа / {{ case.case_number }}",
+    case_number: "{{ case.case_number }}"
+};
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="mb-3">
     <a href="{% url 'cases:detail' pk=case.pk %}" class="text-decoration-none text-muted small">

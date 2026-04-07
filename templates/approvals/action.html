@@ -2,6 +2,16 @@
 
 {% block title %}Рассмотрение решения — АППК{% endblock %}
 
+{% block feedback_meta %}
+<script>
+window.FEEDBACK_CONTEXT = {
+    entity_type: "approval",
+    entity_id: {{ flow.pk }},
+    entity_label: "Согласование: {{ flow.get_entity_type_display }}"
+};
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="mb-3">
     <a href="{% url 'approvals:queue' %}" class="text-decoration-none text-muted small">

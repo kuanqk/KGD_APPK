@@ -2,6 +2,17 @@
 
 {% block title %}Заслушивание — {{ hearing.case.case_number }} — АППК{% endblock %}
 
+{% block feedback_meta %}
+<script>
+window.FEEDBACK_CONTEXT = {
+    entity_type: "hearing",
+    entity_id: {{ hearing.pk }},
+    entity_label: "Заслушивание {{ hearing.hearing_date|date:'d.m.Y' }} / {{ hearing.case.case_number }}",
+    case_number: "{{ hearing.case.case_number }}"
+};
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="mb-3">
     <a href="{% url 'cases:detail' pk=hearing.case.pk %}" class="text-decoration-none text-muted small">

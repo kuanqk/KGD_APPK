@@ -1,4 +1,5 @@
 import csv
+import json
 import logging
 
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -33,12 +34,26 @@ class FeedbackCreateView(LoginRequiredMixin, View):
         if feedback_type not in FeedbackType.values:
             return JsonResponse({"success": False, "error": "Неверный тип отзыва."}, status=400)
 
+        page_url = request.POST.get("page_url", "")[:500]
+        page_title = request.POST.get("page_title", "")[:300]
+        user_agent_str = request.META.get("HTTP_USER_AGENT", "")[:500]
+        try:
+            context_data = json.loads(request.POST.get("context_json", "{}") or "{}")
+            if not isinstance(context_data, dict):
+                context_data = {}
+        except (json.JSONDecodeError, ValueError):
+            context_data = {}
+
         feedback = Feedback.objects.create(
             user=request.user,
             feedback_type=feedback_type,
             description=description,
             case_number=case_number,
             attachment=attachment,
+            page_url=page_url,
+            page_title=page_title,
+            user_agent=user_agent_str,
+            context=context_data,
         )
 
         audit_log(
@@ -46,7 +61,7 @@ class FeedbackCreateView(LoginRequiredMixin, View):
             action="feedback_created",
             entity_type="feedback",
             entity_id=feedback.id,
-            details={"type": feedback_type},
+            details={"type": feedback_type, "page_url": page_url},
         )
 
         return JsonResponse({"success": True})

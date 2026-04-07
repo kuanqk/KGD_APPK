@@ -25,10 +25,12 @@ class FeedbackAdmin(admin.ModelAdmin):
     readonly_fields = [
         "user", "feedback_type", "description", "case_number",
         "attachment", "created_at", "resolved_at",
+        "page_url", "page_title", "user_agent", "context",
     ]
     fields = [
         "user", "feedback_type", "status", "priority",
         "description", "case_number", "attachment",
         "admin_comment", "created_at", "resolved_at", "is_reviewed",
+        "page_url", "page_title", "user_agent", "context",
     ]
     actions = [mark_resolved, mark_in_progress]

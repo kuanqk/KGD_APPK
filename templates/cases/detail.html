@@ -2,6 +2,17 @@
 
 {% block title %}{{ case.case_number }} — АППК{% endblock %}
 
+{% block feedback_meta %}
+<script>
+window.FEEDBACK_CONTEXT = {
+    entity_type: "case",
+    entity_id: {{ case.pk }},
+    entity_label: "Дело {{ case.case_number }}",
+    case_number: "{{ case.case_number }}"
+};
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
