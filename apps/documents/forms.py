@@ -194,9 +194,49 @@ class HearingProtocolForm(forms.Form):
         label="Ф.И.О. должностного лица (подпись)",
         widget=forms.TextInput(attrs={"class": "form-control"}),
     )
+    member_2_position = forms.CharField(
+        max_length=200, required=False,
+        label="Должность члена комиссии 2",
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "напр. Заместитель руководителя"}),
+    )
+    member_2_name = forms.CharField(
+        max_length=300, required=False,
+        label="Ф.И.О. члена комиссии 2",
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    member_3_position = forms.CharField(
+        max_length=200, required=False,
+        label="Должность члена комиссии 3",
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "напр. Руководитель управления"}),
+    )
+    member_3_name = forms.CharField(
+        max_length=300, required=False,
+        label="Ф.И.О. члена комиссии 3",
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    member_4_position = forms.CharField(
+        max_length=200, required=False,
+        label="Должность члена комиссии 4",
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "напр. Руководитель отдела"}),
+    )
+    member_4_name = forms.CharField(
+        max_length=300, required=False,
+        label="Ф.И.О. члена комиссии 4",
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
     acquainted_name = forms.CharField(
         max_length=300,
-        label="С протоколом ознакомлен (ФИО участника)",
+        label="С протоколом ознакомлен — участник 1 (ФИО)",
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    acquainted_name_2 = forms.CharField(
+        max_length=300, required=False,
+        label="Участник 2 (ФИО)",
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    acquainted_name_3 = forms.CharField(
+        max_length=300, required=False,
+        label="Участник 3 (ФИО)",
         widget=forms.TextInput(attrs={"class": "form-control"}),
     )
     decision_text = forms.CharField(

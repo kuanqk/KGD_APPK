@@ -123,20 +123,51 @@
                         {% if form.dgd_position.errors %}<div class="text-danger small mt-1">{{ form.dgd_position.errors }}</div>{% endif %}
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold small">
-                            {{ form.signatory_name.label }} <span class="text-danger">*</span>
-                        </label>
-                        {{ form.signatory_name }}
-                        {% if form.signatory_name.errors %}<div class="text-danger small mt-1">{{ form.signatory_name.errors }}</div>{% endif %}
+                    {# ── Члены комиссии (подписанты) ───────────────────── #}
+                    <div class="border rounded p-3 mb-3 bg-light">
+                        <div class="fw-semibold small mb-2">
+                            <i class="bi bi-people"></i> Члены комиссии (подписанты)
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label small text-muted">Председатель / должностное лицо <span class="text-danger">*</span></label>
+                            {{ form.signatory_name }}
+                            {% if form.signatory_name.errors %}<div class="text-danger small mt-1">{{ form.signatory_name.errors }}</div>{% endif %}
+                        </div>
+
+                        {% for i in "234" %}
+                        {% with pos_field=form|dictsort:"field_name" %}{% endwith %}
+                        <div class="row g-2 mb-2" id="member-row-{{ i }}">
+                            <div class="col-md-5">
+                                <label class="form-label small text-muted">Должность члена {{ i }}</label>
+                                {% if i == "2" %}{{ form.member_2_position }}{% elif i == "3" %}{{ form.member_3_position }}{% else %}{{ form.member_4_position }}{% endif %}
+                            </div>
+                            <div class="col-md-7">
+                                <label class="form-label small text-muted">Ф.И.О. члена {{ i }}</label>
+                                {% if i == "2" %}{{ form.member_2_name }}{% elif i == "3" %}{{ form.member_3_name }}{% else %}{{ form.member_4_name }}{% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
 
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold small">
-                            {{ form.acquainted_name.label }} <span class="text-danger">*</span>
-                        </label>
-                        {{ form.acquainted_name }}
-                        {% if form.acquainted_name.errors %}<div class="text-danger small mt-1">{{ form.acquainted_name.errors }}</div>{% endif %}
+                    {# ── Участники ознакомлены ──────────────────────────── #}
+                    <div class="border rounded p-3 mb-4 bg-light">
+                        <div class="fw-semibold small mb-2">
+                            <i class="bi bi-person-check"></i> С протоколом ознакомлены
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small text-muted">Участник 1 <span class="text-danger">*</span></label>
+                            {{ form.acquainted_name }}
+                            {% if form.acquainted_name.errors %}<div class="text-danger small mt-1">{{ form.acquainted_name.errors }}</div>{% endif %}
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small text-muted">Участник 2</label>
+                            {{ form.acquainted_name_2 }}
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label small text-muted">Участник 3</label>
+                            {{ form.acquainted_name_3 }}
+                        </div>
                     </div>
 
                     <div class="mb-4">
@@ -199,7 +230,15 @@
     const participantInfoInput  = document.getElementById('id_participant_info');
     const participantPosInput   = document.getElementById('id_participant_position');
     const dgdPositionInput      = document.getElementById('id_dgd_position');
-    const signatoryInput = document.getElementById('id_signatory_name');
+    const signatoryInput  = document.getElementById('id_signatory_name');
+    const member2PosInput = document.getElementById('id_member_2_position');
+    const member2NameInput= document.getElementById('id_member_2_name');
+    const member3PosInput = document.getElementById('id_member_3_position');
+    const member3NameInput= document.getElementById('id_member_3_name');
+    const member4PosInput = document.getElementById('id_member_4_position');
+    const member4NameInput= document.getElementById('id_member_4_name');
+    const acquainted2Input= document.getElementById('id_acquainted_name_2');
+    const acquainted3Input= document.getElementById('id_acquainted_name_3');
     const acquaintedInput= document.getElementById('id_acquainted_name');
     const decisionInput  = document.getElementById('id_decision_text');
     const preview        = document.getElementById('preview-content');
@@ -245,8 +284,18 @@
         const partPos    = fval(participantPosInput);
         const dgdPos     = dgdPositionInput ? fval(dgdPositionInput) : '';
         const signatory  = fval(signatoryInput);
-        const acquainted = fval(acquaintedInput);
-        const decision   = decisionInput ? fval(decisionInput) : '';
+
+        // Commission members (2-4)
+        const extraMembers = [
+            { pos: member2PosInput ? fval(member2PosInput) : '', name: member2NameInput ? fval(member2NameInput) : '' },
+            { pos: member3PosInput ? fval(member3PosInput) : '', name: member3NameInput ? fval(member3NameInput) : '' },
+            { pos: member4PosInput ? fval(member4PosInput) : '', name: member4NameInput ? fval(member4NameInput) : '' },
+        ].filter(function(m) { return m.name; });
+
+        const acquainted  = fval(acquaintedInput);
+        const acquainted2 = acquainted2Input ? fval(acquainted2Input) : '';
+        const acquainted3 = acquainted3Input ? fval(acquainted3Input) : '';
+        const decision    = decisionInput ? fval(decisionInput) : '';
 
         const dateParts = rawDate ? rawDate.split('-') : [];
         const dateDay   = dateParts[2] ? String(parseInt(dateParts[2], 10)).padStart(2, '0') : '[__]';
@@ -289,28 +338,39 @@
                 '<p><strong>Позиция ДГД (выступление должностного лица):</strong><br>' +
                 mv(nl2br(dgdPos)) + '</p>' : '') +
 
-            '<table width="100%" style="margin-top:20px;font-size:12px">' +
-            '<tr>' +
-            '<td style="width:60%">' + mv(signatory) + '<br><em>(Ф.И.О. должностного лица)</em></td>' +
-            '<td style="width:40%;text-align:right">________________<br><em>(подпись)</em></td>' +
-            '</tr>' +
-            '<tr>' +
-            '<td style="padding-top:16px">' + mv(secretary) + '<br><em>(Ф.И.О. секретаря)</em></td>' +
-            '<td style="padding-top:16px;text-align:right">________________<br><em>(подпись)</em></td>' +
-            '</tr>' +
-            '</table>' +
-
             (decision ?
                 '<p style="margin-top:16px"><strong>Принятое решение по итогам заслушивания:</strong><br>' +
                 mv(nl2br(decision)) + '</p>' : '') +
 
-            '<p style="margin-top:20px"><strong>С протоколом заслушивания ознакомлен:</strong><br>' +
-            mv(acquainted) + '<br><em>(Ф.И.О. участника, подпись)</em></p>';
+            '<table width="100%" style="margin-top:20px;font-size:12px">' +
+            '<tr>' +
+            '<td style="width:60%">' + mv(signatory) + '<br><em>(председатель / должностное лицо)</em></td>' +
+            '<td style="width:40%;text-align:right">________________<br><em>(подпись)</em></td>' +
+            '</tr>' +
+            extraMembers.map(function(m) {
+                return '<tr><td style="padding-top:12px">' +
+                    (m.pos ? '<em>' + mv(m.pos) + '</em><br>' : '') + mv(m.name) +
+                    '</td><td style="padding-top:12px;text-align:right">________________<br><em>(подпись)</em></td></tr>';
+            }).join('') +
+            '<tr>' +
+            '<td style="padding-top:12px">' + mv(secretary) + '<br><em>(Ф.И.О. секретаря)</em></td>' +
+            '<td style="padding-top:12px;text-align:right">________________<br><em>(подпись)</em></td>' +
+            '</tr>' +
+            '</table>' +
+
+            '<p style="margin-top:20px"><strong>С протоколом заслушивания ознакомлены:</strong></p>' +
+            '<p>' + mv(acquainted) + ' ________________</p>' +
+            (acquainted2 ? '<p>' + mv(acquainted2) + ' ________________</p>' : '') +
+            (acquainted3 ? '<p>' + mv(acquainted3) + ' ________________</p>' : '');
     }
 
     [dateInput, timeStartInput, timeEndInput, officialInput, secretaryInput,
      participantInfoInput, participantPosInput, dgdPositionInput,
-     signatoryInput, acquaintedInput, decisionInput
+     signatoryInput,
+     member2PosInput, member2NameInput, member3PosInput, member3NameInput,
+     member4PosInput, member4NameInput,
+     acquaintedInput, acquainted2Input, acquainted3Input,
+     decisionInput
     ].filter(Boolean).forEach(function (el) {
         el.addEventListener('input', render);
         el.addEventListener('change', render);

@@ -320,7 +320,17 @@ def generate_hearing_protocol(case, form_data: dict, user) -> CaseDocument:
         "participant_position": form_data["participant_position"],
         "dgd_position": (form_data.get("dgd_position") or "").strip(),
         "signatory_name": form_data["signatory_name"],
+        "commission_members": [
+            {
+                "position": (form_data.get(f"member_{i}_position") or "").strip(),
+                "name": (form_data.get(f"member_{i}_name") or "").strip(),
+            }
+            for i in range(2, 5)
+            if (form_data.get(f"member_{i}_name") or "").strip()
+        ],
         "acquainted_name": form_data["acquainted_name"],
+        "acquainted_name_2": (form_data.get("acquainted_name_2") or "").strip(),
+        "acquainted_name_3": (form_data.get("acquainted_name_3") or "").strip(),
         "decision_text": (form_data.get("decision_text") or "").strip(),
         "doc_type_display": dict(DocumentType.choices).get(doc_type, doc_type),
     })
