@@ -240,6 +240,8 @@ class NoticeFormView(LoginRequiredMixin, View):
                     hearing_date=form.cleaned_data["hearing_date"],
                     hearing_time=form.cleaned_data["hearing_time"],
                     hearing_address=form.cleaned_data["hearing_address"],
+                    inspector_phone=form.cleaned_data.get("inspector_phone", ""),
+                    inspector_office=form.cleaned_data.get("inspector_office", ""),
                     user=request.user,
                 )
                 messages.success(request, f"Извещение {doc.doc_number} успешно сформировано.")

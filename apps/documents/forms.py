@@ -125,10 +125,25 @@ class NoticeForm(forms.Form):
         label="Адрес проведения",
         widget=forms.Textarea(attrs={"class": "form-control", "rows": 2}),
     )
+    inspector_phone = forms.CharField(
+        max_length=50,
+        required=False,
+        label="Контактный телефон инспектора",
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "+7 (___) ___-__-__"}),
+    )
+    inspector_office = forms.CharField(
+        max_length=50,
+        required=False,
+        label="Номер кабинета инспектора",
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "каб. 101"}),
+    )
 
     def __init__(self, *args, case=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.case = case
+        # Prefill phone from responsible_user if available
+        if case and case.responsible_user and not self.initial.get("inspector_phone"):
+            self.initial["inspector_phone"] = case.responsible_user.phone or ""
 
     def clean_hearing_date(self):
         return self.cleaned_data.get("hearing_date")
@@ -164,6 +179,15 @@ class HearingProtocolForm(forms.Form):
     participant_position = forms.CharField(
         label="Изложение позиции участника",
         widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+    )
+    dgd_position = forms.CharField(
+        required=False,
+        label="Позиция ДГД (выступление должностного лица)",
+        widget=forms.Textarea(attrs={
+            "class": "form-control",
+            "rows": 3,
+            "placeholder": "Изложите позицию органа государственных доходов по существу дела...",
+        }),
     )
     signatory_name = forms.CharField(
         max_length=300,

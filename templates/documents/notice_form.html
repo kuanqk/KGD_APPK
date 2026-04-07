@@ -92,6 +92,28 @@
                         {% endif %}
                     </div>
 
+                    <div class="mb-3 border-top pt-3">
+                        <div class="text-muted small fw-semibold mb-2">
+                            <i class="bi bi-person-badge"></i> Контактные данные инспектора
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label small">{{ form.inspector_phone.label }}</label>
+                                {{ form.inspector_phone }}
+                                {% if form.inspector_phone.errors %}
+                                <div class="text-danger small mt-1">{{ form.inspector_phone.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small">{{ form.inspector_office.label }}</label>
+                                {{ form.inspector_office }}
+                                {% if form.inspector_office.errors %}
+                                <div class="text-danger small mt-1">{{ form.inspector_office.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-file-earmark-pdf"></i> Сформировать PDF
@@ -138,15 +160,12 @@
     const responsible   = root.dataset.responsible   || '[____]';
     const phone         = root.dataset.phone         || '[____]';
 
-    const dateInput    = document.getElementById('id_hearing_date');
-    const timeInput    = document.getElementById('id_hearing_time');
-    const addressInput = document.getElementById('id_hearing_address');
-    const preview      = document.getElementById('preview-content');
-
-    const minDate = root.dataset.minDate;
-    if (minDate) {
-        dateInput.min = minDate;
-    }
+    const dateInput      = document.getElementById('id_hearing_date');
+    const timeInput      = document.getElementById('id_hearing_time');
+    const addressInput   = document.getElementById('id_hearing_address');
+    const inspPhoneInput = document.getElementById('id_inspector_phone');
+    const inspOfficeInput= document.getElementById('id_inspector_office');
+    const preview        = document.getElementById('preview-content');
 
     const MONTHS_RU = [
         '', 'января','февраля','марта','апреля','мая','июня',
@@ -184,9 +203,11 @@
     }
 
     function render() {
-        const rawDate    = dateInput.value;
-        const rawTime    = fval(timeInput);
-        const rawAddress = fval(addressInput);
+        const rawDate     = dateInput.value;
+        const rawTime     = fval(timeInput);
+        const rawAddress  = fval(addressInput);
+        const inspPhone   = inspPhoneInput  ? fval(inspPhoneInput)  : phone;
+        const inspOffice  = inspOfficeInput ? fval(inspOfficeInput) : '';
 
         const date    = m(rawDate ? formatDate(rawDate) : '');
         const time    = m(rawTime);
@@ -209,7 +230,9 @@
             '<p>' +
             'Процедура заслушивания состоится: ' + date + ' года' +
             ' в ' + time + ' часов, по адресу: ' + address + '.<br>' +
-            'Контактное лицо ' + a(responsible) + ', тел. ' + a(phone) + '.' +
+            'Контактное лицо ' + a(responsible) +
+            ', тел. ' + m(inspPhone || phone) +
+            (inspOffice ? ', ' + m(inspOffice) : '') + '.' +
             '</p>' +
             '<p>' +
             'Согласно пункту 3 статьи 73 АППК, вы вправе предоставить или высказать' +
@@ -228,6 +251,8 @@
     dateInput.addEventListener('change', render);
     timeInput.addEventListener('change', render);
     addressInput.addEventListener('input', render);
+    if (inspPhoneInput)  inspPhoneInput.addEventListener('input', render);
+    if (inspOfficeInput) inspOfficeInput.addEventListener('input', render);
     render();
 })();
 </script>

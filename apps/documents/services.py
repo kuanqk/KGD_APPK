@@ -130,7 +130,10 @@ def _format_hearing_date(d: date) -> str:
 
 
 @transaction.atomic
-def generate_notice(case, hearing_date, hearing_time, hearing_address: str, user) -> CaseDocument:
+def generate_notice(
+    case, hearing_date, hearing_time, hearing_address: str, user,
+    inspector_phone: str = "", inspector_office: str = "",
+) -> CaseDocument:
     """Генерирует Извещение о явке с указанными датой/временем/адресом заслушивания."""
     doc_type = DocumentType.NOTICE
     template = DocumentTemplate.objects.filter(doc_type=doc_type, is_active=True).first()
@@ -148,6 +151,8 @@ def generate_notice(case, hearing_date, hearing_time, hearing_address: str, user
         "hearing_date": _format_hearing_date(hearing_date),
         "hearing_time": hearing_time.strftime("%H:%M"),
         "hearing_address": hearing_address,
+        "inspector_phone": (inspector_phone or context.get("responsible_phone") or "").strip(),
+        "inspector_office": inspector_office.strip(),
     })
     context["doc_type_display"] = dict(DocumentType.choices).get(doc_type, doc_type)
 
@@ -313,6 +318,7 @@ def generate_hearing_protocol(case, form_data: dict, user) -> CaseDocument:
         "secretary_name": form_data["secretary_name"],
         "participant_info": form_data["participant_info"],
         "participant_position": form_data["participant_position"],
+        "dgd_position": (form_data.get("dgd_position") or "").strip(),
         "signatory_name": form_data["signatory_name"],
         "acquainted_name": form_data["acquainted_name"],
         "decision_text": (form_data.get("decision_text") or "").strip(),

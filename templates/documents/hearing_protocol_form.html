@@ -117,6 +117,14 @@
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold small">
+                            <i class="bi bi-building"></i> {{ form.dgd_position.label }}
+                        </label>
+                        {{ form.dgd_position }}
+                        {% if form.dgd_position.errors %}<div class="text-danger small mt-1">{{ form.dgd_position.errors }}</div>{% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">
                             {{ form.signatory_name.label }} <span class="text-danger">*</span>
                         </label>
                         {{ form.signatory_name }}
@@ -190,6 +198,7 @@
     const secretaryInput = document.getElementById('id_secretary_name');
     const participantInfoInput  = document.getElementById('id_participant_info');
     const participantPosInput   = document.getElementById('id_participant_position');
+    const dgdPositionInput      = document.getElementById('id_dgd_position');
     const signatoryInput = document.getElementById('id_signatory_name');
     const acquaintedInput= document.getElementById('id_acquainted_name');
     const decisionInput  = document.getElementById('id_decision_text');
@@ -234,6 +243,7 @@
         const secretary  = fval(secretaryInput);
         const partInfo   = fval(participantInfoInput);
         const partPos    = fval(participantPosInput);
+        const dgdPos     = dgdPositionInput ? fval(dgdPositionInput) : '';
         const signatory  = fval(signatoryInput);
         const acquainted = fval(acquaintedInput);
         const decision   = decisionInput ? fval(decisionInput) : '';
@@ -275,6 +285,10 @@
             '<p><strong>Изложение позиции участника:</strong><br>' +
             mv(nl2br(partPos)) + '</p>' +
 
+            (dgdPos ?
+                '<p><strong>Позиция ДГД (выступление должностного лица):</strong><br>' +
+                mv(nl2br(dgdPos)) + '</p>' : '') +
+
             '<table width="100%" style="margin-top:20px;font-size:12px">' +
             '<tr>' +
             '<td style="width:60%">' + mv(signatory) + '<br><em>(Ф.И.О. должностного лица)</em></td>' +
@@ -295,8 +309,8 @@
     }
 
     [dateInput, timeStartInput, timeEndInput, officialInput, secretaryInput,
-     participantInfoInput, participantPosInput, signatoryInput, acquaintedInput,
-     decisionInput
+     participantInfoInput, participantPosInput, dgdPositionInput,
+     signatoryInput, acquaintedInput, decisionInput
     ].filter(Boolean).forEach(function (el) {
         el.addEventListener('input', render);
         el.addEventListener('change', render);
