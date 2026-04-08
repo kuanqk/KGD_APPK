@@ -31,7 +31,7 @@ class CaseListView(LoginRequiredMixin, ListView):
         qs = (
             AdministrativeCase.objects
             .for_user(self.request.user)
-            .select_related("taxpayer", "responsible_user", "created_by")
+            .select_related("taxpayer", "responsible_user", "created_by", "region")
             .annotate(
                 days_stagnant=ExpressionWrapper(
                     Now() - F("last_activity_at"),
@@ -48,7 +48,11 @@ class CaseListView(LoginRequiredMixin, ListView):
         if form.cleaned_data.get("department"):
             qs = qs.filter(department=form.cleaned_data["department"])
         if form.cleaned_data.get("region"):
-            qs = qs.filter(region__icontains=form.cleaned_data["region"])
+            r = form.cleaned_data["region"].strip()
+            if r:
+                qs = qs.filter(
+                    Q(region__name__icontains=r) | Q(region__code__icontains=r)
+                )
         if form.cleaned_data.get("responsible_user"):
             qs = qs.filter(responsible_user=form.cleaned_data["responsible_user"])
         if form.cleaned_data.get("date_from"):
