@@ -21,6 +21,11 @@ def _require_admin(request):
     return request.user.is_authenticated and request.user.role == "admin"
 
 
+def _can_view_feedback(request):
+    """Список, детализация, статистика, CSV — для администраторов и руководителей."""
+    return request.user.is_authenticated and request.user.role in ("admin", "reviewer")
+
+
 class FeedbackCreateView(LoginRequiredMixin, View):
     def post(self, request):
         feedback_type = request.POST.get("feedback_type", "").strip()
@@ -74,7 +79,7 @@ class FeedbackListView(LoginRequiredMixin, ListView):
     paginate_by = 25
 
     def dispatch(self, request, *args, **kwargs):
-        if not _require_admin(request):
+        if not _can_view_feedback(request):
             return HttpResponseForbidden()
         return super().dispatch(request, *args, **kwargs)
 
@@ -114,7 +119,7 @@ class FeedbackDetailView(LoginRequiredMixin, DetailView):
     context_object_name = "fb"
 
     def dispatch(self, request, *args, **kwargs):
-        if not _require_admin(request):
+        if not _can_view_feedback(request):
             return HttpResponseForbidden()
         return super().dispatch(request, *args, **kwargs)
 
@@ -122,6 +127,7 @@ class FeedbackDetailView(LoginRequiredMixin, DetailView):
         ctx = super().get_context_data(**kwargs)
         ctx["feedback_statuses"] = FeedbackStatus.choices
         ctx["feedback_priorities"] = FeedbackPriority.choices
+        ctx["can_manage_feedback"] = _require_admin(self.request)
         return ctx
 
 
@@ -196,7 +202,7 @@ class FeedbackMarkReviewedView(LoginRequiredMixin, View):
 
 class FeedbackExportCsvView(LoginRequiredMixin, View):
     def get(self, request):
-        if not _require_admin(request):
+        if not _can_view_feedback(request):
             return HttpResponseForbidden()
 
         qs = Feedback.objects.select_related("user").order_by("-created_at")
@@ -242,7 +248,7 @@ class FeedbackExportCsvView(LoginRequiredMixin, View):
 
 class FeedbackStatsView(LoginRequiredMixin, View):
     def get(self, request):
-        if not _require_admin(request):
+        if not _can_view_feedback(request):
             return HttpResponseForbidden()
 
         by_type = (

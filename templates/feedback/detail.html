@@ -143,8 +143,9 @@
         </div>
     </div>
 
-    {# ——— Правая колонка: управление ——— #}
+    {# ——— Правая колонка: ответ команды / управление (только админ) ——— #}
     <div class="col-lg-5">
+        {% if can_manage_feedback %}
         <div class="card">
             <div class="card-header py-2 fw-semibold">
                 <i class="bi bi-pencil-square"></i> Управление
@@ -184,6 +185,20 @@
                 </form>
             </div>
         </div>
+        {% else %}
+        <div class="card border-primary">
+            <div class="card-header py-2 fw-semibold bg-primary text-white">
+                <i class="bi bi-reply-fill"></i> Ответ команды
+            </div>
+            <div class="card-body">
+                {% if fb.admin_comment %}
+                <p class="mb-0 small" style="white-space: pre-wrap;">{{ fb.admin_comment }}</p>
+                {% else %}
+                <p class="text-muted small mb-0">Ответ пока не добавлен администратором.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
