@@ -8,6 +8,10 @@ __pycache__/
 dist/
 build/
 
+# Celery Beat (локальное расписание, не коммитить)
+celerybeat-schedule
+celerybeat-schedule.*
+
 # Django
 *.log
 local_settings.py
@@ -31,3 +35,6 @@ media/
 # OS
 .DS_Store
 Thumbs.db
+
+# local files
+old/
