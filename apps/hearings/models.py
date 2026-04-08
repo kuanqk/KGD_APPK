@@ -130,7 +130,7 @@ class HearingProtocol(models.Model):
     deadline_2days = models.DateField(
         null=True,
         blank=True,
-        verbose_name="Дедлайн (2 рабочих дня)",
+        verbose_name="Крайний срок (3 рабочих дня на замечания к протоколу, п. 6 ст. 74 АППК)",
         db_index=True,
     )
     created_by = models.ForeignKey(

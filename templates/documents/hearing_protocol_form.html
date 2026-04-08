@@ -85,6 +85,15 @@
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold small">
+                            {{ form.venue.label }}
+                        </label>
+                        {{ form.venue }}
+                        {% if form.venue.errors %}<div class="text-danger small mt-1">{{ form.venue.errors }}</div>{% endif %}
+                        <div class="form-text small">Подставляется адрес из реквизитов КГД; при необходимости укажите фактическое место заслушивания.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">
                             {{ form.official_name.label }} <span class="text-danger">*</span>
                         </label>
                         {{ form.official_name }}

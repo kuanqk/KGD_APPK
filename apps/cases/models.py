@@ -368,6 +368,14 @@ class TaxAuthorityDetails(models.Model):
         related_name="authority_details",
         verbose_name="Подразделение",
     )
+    region = models.ForeignKey(
+        "Region",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tax_authority_details",
+        verbose_name="Регион (если задан — дополнительный подбор реквизитов по делу)",
+    )
     name = models.CharField(max_length=500, verbose_name="Наименование административного органа")
     bin_number = models.CharField(max_length=12, blank=True, verbose_name="БИН органа")
     address = models.TextField(blank=True, verbose_name="Адрес")

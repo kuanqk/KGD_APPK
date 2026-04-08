@@ -192,7 +192,8 @@ class ProtocolCreateView(LoginRequiredMixin, FormView):
             messages.success(
                 self.request,
                 f"Протокол {protocol.protocol_number} оформлен. "
-                f"Дедлайн решения: {protocol.deadline_2days:%d.%m.%Y}."
+                f"Крайний срок замечаний к протоколу (3 р.д., п. 6 ст. 74 АППК): "
+                f"{protocol.deadline_2days:%d.%m.%Y}."
             )
             return redirect("hearings:detail", pk=self.hearing.pk)
         except ValueError as e:

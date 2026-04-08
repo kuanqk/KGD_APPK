@@ -336,7 +336,7 @@ class HearingProtocolFormView(LoginRequiredMixin, View):
             "authority_address": details.address if details else "",
             "auto_fields": {
                 "Наименование органа": (details.name if details else "") or "—",
-                "Адрес органа": (details.address if details else "") or "—",
+                "Адрес органа (по умолчанию для «Места проведения»)": (details.address if details else "") or "—",
                 "Налогоплательщик": f"{case.taxpayer.name} (БИН/ИИН: {case.taxpayer.iin_bin})",
                 "Контактное лицо": responsible.get_full_name() if responsible else "—",
             },

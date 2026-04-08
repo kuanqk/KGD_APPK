@@ -73,11 +73,11 @@ class PositionAdmin(admin.ModelAdmin):
 
 @admin.register(TaxAuthorityDetails)
 class TaxAuthorityDetailsAdmin(admin.ModelAdmin):
-    list_display = ["name", "department", "city", "deputy_name", "is_active", "updated_at", "updated_by"]
+    list_display = ["name", "department", "region", "city", "deputy_name", "is_active", "updated_at", "updated_by"]
     list_filter = ["is_active"]
     search_fields = ["name", "bin_number", "deputy_name"]
     readonly_fields = ["updated_at", "updated_by"]
-    raw_id_fields = ["department"]
+    raw_id_fields = ["department", "region"]
 
 
 @admin.register(CaseEvent)

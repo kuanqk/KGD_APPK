@@ -150,6 +150,15 @@ class NoticeForm(forms.Form):
 
 
 class HearingProtocolForm(forms.Form):
+    venue = forms.CharField(
+        max_length=500,
+        required=False,
+        label="Место проведения заслушивания (адрес)",
+        widget=forms.TextInput(attrs={
+            "class": "form-control",
+            "placeholder": "Как в протоколе; по умолчанию — адрес из реквизитов КГД",
+        }),
+    )
     hearing_date = forms.DateField(
         label="Дата рассмотрения",
         widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}),
@@ -252,6 +261,11 @@ class HearingProtocolForm(forms.Form):
     def __init__(self, *args, case=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.case = case
+        if case and not self.initial.get("venue") and not self.data:
+            from apps.documents.services import _get_authority_details
+            d = _get_authority_details(case)
+            if d and d.address:
+                self.initial["venue"] = d.address.strip()
 
     def clean_hearing_date(self):
         return self.cleaned_data.get("hearing_date")

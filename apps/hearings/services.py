@@ -1,5 +1,5 @@
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 
 from django.db import transaction
 from django.utils import timezone
@@ -21,7 +21,7 @@ HEARING_ALLOWED_STATUSES = (
 
 
 def calc_working_deadline(start: date, days: int = 2) -> date:
-    """Вычисляет дату дедлайна, пропуская субботу и воскресенье."""
+    """Вычисляет дату, отстоящую на ``days`` рабочих дней от ``start`` (без сб/вс)."""
     current = start
     counted = 0
     while counted < days:
@@ -49,6 +49,33 @@ def _generate_protocol_number() -> str:
         except (ValueError, IndexError):
             seq = 1
     return f"{prefix}{seq:05d}"
+
+
+def _hearing_protocol_form_data_from_hearing(hearing: Hearing, result_summary: str, user) -> dict:
+    """Данные для generate_hearing_protocol из заслушивания (место, дата, время, итог)."""
+    ht = hearing.hearing_time
+    if ht:
+        start = ht
+        end = (datetime.combine(hearing.hearing_date, ht) + timedelta(hours=1)).time()
+    else:
+        start = time(9, 0)
+        end = time(10, 0)
+    full_name = user.get_full_name() or ""
+    summary = (result_summary or "").strip() or "—"
+    return {
+        "venue": (hearing.location or "").strip(),
+        "hearing_date": hearing.hearing_date,
+        "time_start": start,
+        "time_end": end,
+        "official_name": full_name,
+        "secretary_name": "",
+        "participant_info": summary,
+        "participant_position": "",
+        "dgd_position": "",
+        "signatory_name": full_name,
+        "acquainted_name": "",
+        "decision_text": "",
+    }
 
 
 @transaction.atomic
@@ -175,15 +202,15 @@ def create_protocol(
     """
     Оформляет протокол заслушивания:
     1. Создаёт HearingProtocol
-    2. Генерирует PDF через DocumentTemplate
-    3. Вычисляет дедлайн 2 рабочих дня
+    2. Генерирует PDF через интерактивный шаблон протокола (дата, место, итоги)
+    3. Вычисляет крайний срок: 3 рабочих дня на замечания к протоколу (п. 6 ст. 74 АППК)
     4. Переводит дело в PROTOCOL_CREATED
     """
     if hasattr(hearing, "protocol"):
         raise ValueError("Протокол для этого заслушивания уже оформлен.")
 
     today = date.today()
-    deadline = calc_working_deadline(today, days=2)
+    deadline = calc_working_deadline(today, days=3)
     protocol_number = _generate_protocol_number()
 
     protocol = HearingProtocol.objects.create(
@@ -196,14 +223,14 @@ def create_protocol(
         created_by=user,
     )
 
-    # Генерируем PDF протокола через документную систему
     try:
-        from apps.documents.models import DocumentType
-        from apps.documents.services import generate_document
-        doc = generate_document(hearing.case, DocumentType.HEARING_PROTOCOL, user)
+        from apps.documents.services import generate_hearing_protocol
+
+        form_data = _hearing_protocol_form_data_from_hearing(hearing, result_summary, user)
+        doc = generate_hearing_protocol(hearing.case, form_data, user)
         if not doc or not doc.pk:
             logger.error(
-                "create_protocol: generate_document вернул документ без pk (case=%s)",
+                "create_protocol: generate_hearing_protocol вернул документ без pk (case=%s)",
                 hearing.case.case_number,
             )
             raise ValueError("Документ протокола не был сохранён (doc.pk is None).")
@@ -224,7 +251,7 @@ def create_protocol(
         event_type=CaseEventType.DECISION_MADE,
         description=(
             f"Протокол заслушивания {protocol_number} оформлен. "
-            f"Дедлайн решения: {deadline:%d.%m.%Y} (2 рабочих дня)"
+            f"Крайний срок замечаний к протоколу (3 рабочих дня, п. 6 ст. 74 АППК): {deadline:%d.%m.%Y}"
         ),
         created_by=user,
     )

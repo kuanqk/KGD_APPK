@@ -73,11 +73,16 @@ def generate_doc_number(doc_type: str, case=None) -> str:
 
 
 def _get_authority_details(case):
-    """Возвращает TaxAuthorityDetails для дела: сначала по подразделению, затем первую активную."""
+    """Возвращает TaxAuthorityDetails для дела: подразделение → регион → первая активная запись."""
     from apps.cases.models import TaxAuthorityDetails
     dept = getattr(case, "department", None)
     if dept is not None:
         details = TaxAuthorityDetails.objects.filter(department=dept, is_active=True).first()
+        if details:
+            return details
+    region = getattr(case, "region", None)
+    if region is not None:
+        details = TaxAuthorityDetails.objects.filter(region=region, is_active=True).first()
         if details:
             return details
     return TaxAuthorityDetails.objects.filter(is_active=True).first()
@@ -109,6 +114,7 @@ def get_document_context(case) -> dict:
         "authority_name": details.name if details else "",
         "authority_address": details.address if details else "",
         "deputy_name": details.deputy_name if details else "",
+        "deputy_position": details.deputy_position if details else "",
         "city": (details.city if details else "") or "г. Астана",
     }
 
@@ -302,6 +308,9 @@ def generate_hearing_protocol(case, form_data: dict, user) -> CaseDocument:
         raise ValueError("Активный шаблон «Протокол заслушивания» не найден.")
 
     context = get_document_context(case)
+    venue = (form_data.get("venue") or "").strip()
+    if venue:
+        context["authority_address"] = venue
 
     hearing_date = form_data["hearing_date"]
     MONTHS_RU = [

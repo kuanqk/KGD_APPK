@@ -110,6 +110,10 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Большие формы (тексты документов, обратная связь). При 413 за прокси — также client_max_body_size в nginx.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 32 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = DATA_UPLOAD_MAX_MEMORY_SIZE
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 LOGIN_URL = "accounts:login"
