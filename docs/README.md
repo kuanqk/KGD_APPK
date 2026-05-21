@@ -277,7 +277,8 @@ docker compose exec web python manage.py createsuperuser
 
 ## Пилот с КГД: обратная связь и выкаты
 
-Сводка по обращениям, командам, миграциям и настройке реквизитов: **[`docs/pilot_feedback_rollout.md`](pilot_feedback_rollout.md)**.
+- Статус проекта для передачи (**on-prem**, ответственные, ближайшие шаги): **[`docs/project_status_handoff.md`](project_status_handoff.md)**  
+- Сводка по обращениям, командам, миграциям и настройке реквизитов: **[`docs/pilot_feedback_rollout.md`](pilot_feedback_rollout.md)**
 
 ## Лицензия
 
